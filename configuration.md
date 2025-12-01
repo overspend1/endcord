@@ -167,16 +167,16 @@ Note: always put string in `""`. To use `"` inside the string escape it like thi
     Height of extra window drawn above status line. Window title line not included.
 - `member_list_width = 20`  
     Width of member list. It won't be drawn if remaining screen width for chat is less than 32 characters.
-- `format_message = "[%timestamp] <%username> | %content %edited"`  
+- `format_message = "[%timestamp] <%global_name> | %content %edited"`  
     Formatting for message base string. See [format_message](#format_message) for more info.
 - `format_newline = "                       %content"`  
     Formatting for each newline string after message base. See [format_newline](#format_newline) for more info.
-- `format_reply = [REPLY] <%username> | ╭──🡲 [%timestamp] %content"`  
+- `format_reply = [REPLY] <%global_name> | ╭──🡲 [%timestamp] %content"`  
     Formatting for replied message string. It is above message base. See [format_reply](#format_reply) for more info.
 - `format_reactions = "[REACT]                ╰──< %reactions"`  
     Formatting for message reactions string. It is bellow last newline string. See [format_reactions](#format_reactions) for more info.
-- `format_interaction = "                       ╭──⤙ %username used [%command]"`  
-    Formatting for bot interaction string. It is above message base. Only `%username` and `%command` options are available.
+- `format_interaction = "                       ╭──⤙ %global_name used [%command]"`  
+    Formatting for bot interaction string. It is above message base. Only `%username`, `global_name` and `%command` options are available.
 - `format_one_reaction = "%count:%reaction"`  
     Formatting for single reaction string. Reactions string is assembled by joining these strings with `reactions_separator` in between. See [format_one_reaction](#format_one_reaction) for more info.
 - `format_timestamp = "%H:%M"`  
@@ -201,7 +201,7 @@ Note: always put string in `""`. To use `"` inside the string escape it like thi
     Formatting for each thread in forum. One line per thread. See [format_forum](#format_status) for more info.
 - `format_forum_timestamp = "%Y-%m-%d"`  
     Format for timestamps in forum. Same as [datetime format codes](https://docs.python.org/3/library/datetime.html#strftime-and-strptime-format-codes)
-- `format_search_message = "%channel: [%date] <%username> | %content"`  
+- `format_search_message = "%channel: [%date] <%global_name> | %content"`  
     Formatting for message line in extra window when searching. See [format_search_message](#format_search_message) for more info.
 - `edited_string = "(edited)"`  
     A string added to the end of the message when it is edited.
@@ -216,9 +216,9 @@ Note: always put string in `""`. To use `"` inside the string escape it like thi
 - `format_date = " %B %d, %Y "`  
     Format for timestamps in `chat_date_separator`. Same as [datetime format codes](https://docs.python.org/3/library/datetime.html#strftime-and-strptime-format-codes).
 - `limit_username = 10`  
-    Limit to the username string length.
-- `limit_global_name = 15`  
-    Limit to the global name string length.
+    Limit to the username and global name string length.
+- `limit_channel_name = 15`  
+    Limit to the channel name string length.
 - `limit_typing_string = 32`  
     Limit to the typing string length. Also limits `%details` and `%state` in `format_rich`.
 - `limit_prompt = 15`  
@@ -381,7 +381,7 @@ Note: everything after `%content` may be pushed to newline.
 
 ### format_tabs
 - `%num` - number of the tab
-- `%name` - name of the tabbed channel, limited with `limit_global_name`
+- `%name` - name of the tabbed channel, limited with `limit_channel_name`
 - `%server` - name of the server
 
 ### format_prompt
@@ -400,7 +400,7 @@ Note: everything after `%content` may be pushed to newline.
 - `%username` - of message author
 - `%global_name` - of message author
 - `%date` - formatted same as `format_forum_timestamp`
-- `%channel` - to which channel in this server the message belongs, limited with `limit_global_name`
+- `%channel` - to which channel in this server the message belongs, limited with `limit_channel_name`
 
 
 ## pgcurses.json - config for experimental windowed mode

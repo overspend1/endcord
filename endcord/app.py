@@ -534,7 +534,7 @@ class Endcord:
         if new_messages is not None:
             self.messages = new_messages
             if self.messages:
-                self.last_message_id = self.messages[0]["id"]
+                self.last_message_id = self.get_chat_last_message_id()
 
         self.typing = []
         self.chat_end = False
@@ -641,7 +641,7 @@ class Endcord:
             # use preloaded
             elif preload and self.preloaded:
                 self.request_missing_members(guild_id, self.messages)
-                self.last_message_id = self.messages[0]["id"]
+                self.last_message_id = self.get_chat_last_message_id()
                 self.preloaded = False
                 self.need_preload = False
 
@@ -651,7 +651,7 @@ class Endcord:
                 if new_messages is not None:
                     self.messages = new_messages
                     if self.messages:
-                        self.last_message_id = self.messages[0]["id"]
+                        self.last_message_id = self.get_chat_last_message_id()
                 else:
                     self.remove_running_task("Switching channel", 1)
                     logger.warning("Channel switching failed")
@@ -777,7 +777,7 @@ class Endcord:
             self.update_chat(keep_selected=False, select_message_index=select_message_index)
         else:
             self.tui.update_chat(self.chat, self.chat_format)
-        self.set_channel_seen(channel_id, self.messages[0]["id"])   # right after update_chat so new_unreads is determined
+        self.set_channel_seen(channel_id, self.get_chat_last_message_id())   # right after update_chat so new_unreads is determined
         if not guild_id:   # no member list in dms
             self.member_list_visible = False
             self.tui.remove_member_list()
@@ -1072,7 +1072,7 @@ class Endcord:
         self.active_channel["pinned"] = cached[2]
 
         if self.messages:
-            self.last_message_id = self.messages[0]["id"]
+            self.last_message_id = self.get_chat_last_message_id()
 
         # restore deleted
         if self.keep_deleted and self.messages:
@@ -3238,7 +3238,7 @@ class Endcord:
             message_id = self.messages[message_index]["id"]
             if message_id:
                 self.send_ack(self.active_channel["channel_id"], message_id, manual=True)
-                self.set_channel_unseen(self.active_channel["channel_id"], self.messages[0]["id"], False, False, last_acked_message_id=message_id)
+                self.set_channel_unseen(self.active_channel["channel_id"], self.get_chat_last_message_id(), False, False, last_acked_message_id=message_id)
                 self.update_tree()
                 self.update_chat(scroll=False)
 
@@ -3371,7 +3371,7 @@ class Endcord:
     def go_bottom(self):
         """Go to chat bottom"""
         self.tui.scroll_bot()
-        if self.messages[0]["id"] != self.last_message_id:
+        if self.get_chat_last_message_id() != self.last_message_id:
             # check if this channel chat is in cache and remove it
             from_cache = False
             if self.limit_channel_cache:
@@ -3392,10 +3392,10 @@ class Endcord:
                 if new_messages is not None:
                     self.messages = new_messages
                     if self.messages:
-                        self.last_message_id = self.messages[0]["id"]
+                        self.last_message_id = self.get_chat_last_message_id()
                     self.messages = self.get_messages_with_members()
                     self.update_chat()
-                    self.tui.allow_chat_selected_hide(self.messages[0]["id"] == self.last_message_id)
+                    self.tui.allow_chat_selected_hide(self.get_chat_last_message_id() == self.last_message_id)
                     self.remove_running_task("Downloading chat", 4)
                 else:
                     self.remove_running_task("Switching channel", 1)
@@ -3424,6 +3424,19 @@ class Endcord:
             channel_id, channel_name, guild_id, guild_name, parent_hint = self.find_parents_from_id(channel_id)
             self.switch_channel(channel_id, channel_name, guild_id, guild_name, parent_hint=parent_hint)
 
+
+    def get_chat_last_message_id(self):
+        """Safely get last message id in currently loaded messages"""
+        if len(self.messages):
+            if self.messages[0].get("deleted"):
+                # skip deleted messages
+                for message in self.messages:
+                    if not message.get("deleted"):
+                        return message["id"]
+                else:
+                    return 0
+            return self.messages[0]["id"]
+        return 0
 
     def get_msg_urls(self, msg_index, embeds=True):
         """Get all urls from message"""
@@ -3563,6 +3576,7 @@ class Endcord:
         # download
         if not open_media or not destination:
             self.add_running_task("Downloading file", 2)
+            self.update_extra_line("File download started.")
             try:
                 path = self.downloader.download(url)
                 if path:
@@ -3779,7 +3793,7 @@ class Endcord:
             if new_chunk is None:   # network error
                 self.remove_running_task("Downloading chat", 4)
                 return
-            if new_chunk and self.messages[0]["id"] == self.last_message_id and new_chunk[0]["id"] != self.last_message_id:
+            if new_chunk and self.get_chat_last_message_id() == self.last_message_id and new_chunk[0]["id"] != self.last_message_id:
                 self.add_to_channel_cache(self.active_channel["channel_id"], self.messages, self.active_channel.get("pinned", False))
             self.messages = self.messages + new_chunk
             all_msg = len(self.messages)
@@ -3794,7 +3808,7 @@ class Endcord:
                 if len(self.messages) != all_msg:
                     selected_msg_new = selected_msg - (all_msg - len(self.messages))
                     selected_line = self.msg_to_lines(selected_msg_new)
-                self.tui.allow_chat_selected_hide(self.messages[0]["id"] == self.last_message_id)
+                self.tui.allow_chat_selected_hide(self.get_chat_last_message_id() == self.last_message_id)
                 if scroll:
                     scroll_diff = old_chat_len - 1 - selected_line
                     self.tui.set_chat_index(self.tui.chat_index + 2 - scroll_diff)
@@ -3813,7 +3827,7 @@ class Endcord:
             selected_line = 0
             old_chat_len = len(self.chat)
             selected_msg = self.lines_to_msg(selected_line)
-            if new_chunk and self.messages[0]["id"] == self.last_message_id and new_chunk[0]["id"] != self.last_message_id:
+            if new_chunk and self.get_chat_last_message_id() == self.last_message_id and new_chunk[0]["id"] != self.last_message_id:
                 self.add_to_channel_cache(self.active_channel["channel_id"], self.messages, self.active_channel.get("pinned", False))
             self.messages = new_chunk + self.messages
             all_msg = len(self.messages)
@@ -3822,7 +3836,7 @@ class Endcord:
             # keep same selected position
             selected_msg_new = selected_msg + len(new_chunk)
             selected_line = self.msg_to_lines(selected_msg_new)
-            self.tui.allow_chat_selected_hide(self.messages[0]["id"] == self.last_message_id)
+            self.tui.allow_chat_selected_hide(self.get_chat_last_message_id() == self.last_message_id)
             if scroll:
                 scroll_diff = len(self.chat) - old_chat_len
                 self.tui.set_chat_index(selected_line - 4)
@@ -3843,7 +3857,7 @@ class Endcord:
             self.add_running_task("Downloading chat", 4)
             new_messages = self.get_messages_with_members(around=message_id)
             if new_messages:
-                if self.messages[0]["id"] == self.last_message_id and new_messages[0]["id"] != self.last_message_id:
+                if self.get_chat_last_message_id() == self.last_message_id and new_messages[0]["id"] != self.last_message_id:
                     self.add_to_channel_cache(self.active_channel["channel_id"], self.messages, self.active_channel.get("pinned", False))
                 self.messages = new_messages
             self.update_chat(keep_selected=False)
@@ -3851,7 +3865,7 @@ class Endcord:
 
             for num, message in enumerate(self.messages):
                 if message["id"] == message_id:
-                    self.tui.allow_chat_selected_hide(self.messages[0]["id"] == self.last_message_id)
+                    self.tui.allow_chat_selected_hide(self.get_chat_last_message_id() == self.last_message_id)
                     self.tui.set_selected(self.msg_to_lines(num))
                     break
 
@@ -4725,7 +4739,7 @@ class Endcord:
 
     def update_chat(self, keep_selected=True, change_amount=0, select_message_index=None, scroll=True):
         """Generate chat and update it in TUI"""
-        if not self.messages:
+        if self.messages is None:
             return
 
         if keep_selected:
@@ -4866,7 +4880,7 @@ class Endcord:
             self.get_unseen(),
             self.config["format_tabs"],
             self.config["tabs_separator"],
-            self.config["limit_global_name"],
+            self.config["limit_channel_name"],
             self.config["limit_tabs_string"],
         )
         if not no_redraw:
@@ -5534,7 +5548,7 @@ class Endcord:
         channel_id = self.active_channel["channel_id"]
         if op == "MESSAGE_CREATE":
             # if latest message is loaded - not viewing old message chunks
-            if self.messages[0]["id"] == self.last_message_id:
+            if self.get_chat_last_message_id() == self.last_message_id:
                 self.messages.insert(0, data)
             self.last_message_id = data["id"]
             # limit chat size
@@ -5573,8 +5587,8 @@ class Endcord:
                             self.messages[num]["deleted"] = True
                         else:
                             self.messages.pop(num)
-                            if num == 0:
-                                self.last_message_id = self.messages[0]["id"]
+                        if num == 0:
+                            self.last_message_id = self.get_chat_last_message_id()
                         if num < selected_line and not self.keep_deleted:
                             self.update_chat(change_amount=-1, scroll=False)
                         else:
@@ -6235,7 +6249,13 @@ class Endcord:
             if data["content"]:
                 body = data["content"]
             elif data.get("embeds"):
-                body = f"Sent {data["embeds"]} embeds"
+                num = len(data["embeds"])
+                if num == 1:
+                    embed_type = data["embeds"][0]["type"].split("/")[0]
+                    embed_type = ("an " if embed_type.startswith(("a", "e", "i", "o", "u")) else "a ") + embed_type
+                    body = f"Sent {embed_type}"
+                else:
+                    body = f"Sent {num} attachments"
             else:
                 body = "Unknown content"
             notification_id = peripherals.notify_send(
@@ -6644,7 +6664,7 @@ class Endcord:
                     self.new_unreads = False
                     self.this_uread = False
                     self.update_status_line()
-                    self.set_channel_seen(self.active_channel["channel_id"], self.messages[0]["id"], update_line=True)
+                    self.set_channel_seen(self.active_channel["channel_id"], self.get_chat_last_message_id(), update_line=True)
 
             # send pending ack
             self.send_ack()
@@ -6778,7 +6798,7 @@ class Endcord:
 
             # check if new chat chunks needs to be downloaded in any direction
             if not self.forum and self.messages:
-                if (selected_line == 0 or text_index == 0) and self.messages[0]["id"] != self.last_message_id:
+                if (selected_line == 0 or text_index == 0) and self.get_chat_last_message_id() != self.last_message_id:
                     self.get_chat_chunk(past=False, scroll=not(text_index == 0 and selected_line <= 2))
                 elif (selected_line >= len(self.chat) - 1 or self.tui.get_chat_scrolled_top()) and not self.chat_end:
                     self.get_chat_chunk(past=True, scroll=self.tui.get_chat_scrolled_top())

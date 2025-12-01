@@ -161,6 +161,8 @@ def prepare_message(message):
     if message.get("interaction"):   # spacebar_fix - get
         interaction = {
             "username": message["interaction"]["user"]["username"],
+            "global_name": message["interaction"]["user"].get("global_name"),
+            "nick": None,
             "command": message["interaction"].get("name", "Unknown command"),
         }
     else:

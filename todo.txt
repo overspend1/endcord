@@ -1,3 +1,13 @@
+Fix unread line not adjusted when acked from other client
+Fix unread line disappears when member list is opened
+Fix not removing mention unread when new message is in channel
+
+Fix emojis in chat removing borders
+Fix wrong channel sorting, again
+Fix some attachment urls not recognized
+Replace @username @role and #channel in input line
+Add click on spoiler to reveal it
+
 Add more extension points
     add to parser.py
     add to assist_data
@@ -21,8 +31,7 @@ Voice calls
     send and receive RTCP?
     send speaking event?
 
-Fix some attachment urls not recognized
-Replace @username and #channel in input line
+Add flatpack
 Optimize self.guilds by using dicts, each guild/channel is keyed with its id; if its worth it
 Optimize main loop with queues and threading
 Fix member list not updating when switching between same-guild channels

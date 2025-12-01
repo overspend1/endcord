@@ -591,6 +591,15 @@ def clean_type(embed_type):
     return embed_type.split("/")[0]
 
 
+def get_global_name(data, use_nick):
+    """Get nick or global name, fallback to username"""
+    if use_nick and "nick" in data and data["nick"]:
+        return data["nick"]
+    if data["global_name"]:
+        return data["global_name"]
+    return data["username"]
+
+
 def format_poll(poll):
     """Generate message text from poll data"""
     if poll["expires"] < time.time():
@@ -671,7 +680,6 @@ def generate_chat(messages, roles, channels, max_length, my_id, my_roles, member
     edited_string = config["edited_string"]
     reactions_separator = config["reactions_separator"]
     limit_username = config["limit_username"]
-    limit_global_name = config["limit_global_name"]
     use_nick = config["use_nick_when_available"]
     convert_timezone = config["convert_timezone"]
     blocked_mode = config["blocked_mode"]
@@ -715,7 +723,7 @@ def generate_chat(messages, roles, channels, max_length, my_id, my_roles, member
     placeholder_timestamp = generate_timestamp("2015-01-01T00:00:00.000000+00:00", format_timestamp)
     placeholder_message = (format_message
         .replace("%username", " " * limit_username)
-        .replace("%global_name", " " * limit_global_name)
+        .replace("%global_name", " " * limit_username)
         .replace("%timestamp", placeholder_timestamp)
         .replace("%edited", "")
         .replace("%content", "")
@@ -737,10 +745,7 @@ def generate_chat(messages, roles, channels, max_length, my_id, my_roles, member
         .replace("%timestamp", placeholder_timestamp)
         .replace("%reactions", ""),
     ) - 1
-    if format_message.find("%username") > format_message.find("%global_name"):
-        end_name = pre_name_len + limit_username + 1
-    else:
-        end_name = pre_name_len + limit_global_name + 1
+    end_name = pre_name_len + limit_username + 1
     len_messages = len(messages)
 
     for num, message in enumerate(messages):
@@ -840,12 +845,7 @@ def generate_chat(messages, roles, channels, max_length, my_id, my_roles, member
                     ref_message["nick"] = "blocked"
                     ref_message["content"] = "Blocked message"
                     reply_color_format = color_blocked
-                if use_nick and ref_message["nick"]:
-                    global_name_nick = ref_message["nick"]
-                elif ref_message["global_name"]:
-                    global_name_nick = ref_message["global_name"]
-                else:
-                    global_name_nick = ref_message["username"]
+                global_name = get_global_name(ref_message, use_nick)
                 reply_embeds = ref_message["embeds"].copy()
                 content = ""
                 if ref_message["content"]:
@@ -876,12 +876,12 @@ def generate_chat(messages, roles, channels, max_length, my_id, my_roles, member
                                     embed_url = trim_string(embed_url, trim_embed_url_size)
                                 content += f"[{clean_type(embed["type"])} embed]: {embed_url}"
                 reply_line = lazy_replace(format_reply, "%username", lambda: normalize_string(ref_message["username"], limit_username, emoji_safe=True))
-                reply_line = lazy_replace(reply_line, "%global_name", lambda: normalize_string(str(global_name_nick), limit_global_name, emoji_safe=True))
+                reply_line = lazy_replace(reply_line, "%global_name", lambda: normalize_string(global_name, limit_username, emoji_safe=True))
                 reply_line = lazy_replace(reply_line, "%timestamp", lambda: generate_timestamp(ref_message["timestamp"], format_timestamp, convert_timezone))
                 reply_line = lazy_replace(reply_line, "%content", lambda: content.replace("\r", " ").replace("\n", " "))
             else:
                 reply_line = lazy_replace(format_reply, "%username", lambda: normalize_string("Unknown", limit_username))
-                reply_line = lazy_replace(reply_line, "%global_name", lambda: normalize_string("Unknown", limit_global_name))
+                reply_line = lazy_replace(reply_line, "%global_name", lambda: normalize_string("Unknown", limit_username))
                 reply_line = reply_line.replace("%timestamp", "")
                 reply_line = lazy_replace(reply_line, "%content", lambda: ref_message["content"].replace("\r", "").replace("\n", ""))
             reply_line = normalize_string(reply_line, max_length, emoji_safe=True, dots=True)
@@ -899,6 +899,7 @@ def generate_chat(messages, roles, channels, max_length, my_id, my_roles, member
             interaction_line = (
                 format_interaction
                 .replace("%username", message["interaction"]["username"][:limit_username])
+                .replace("%global_name", get_global_name(message, use_nick)[:limit_username])
                 .replace("%command", message["interaction"]["command"])
             )
             interaction_line = normalize_string(interaction_line, max_length, emoji_safe=True, dots=True)
@@ -913,15 +914,7 @@ def generate_chat(messages, roles, channels, max_length, my_id, my_roles, member
 
         # main message
         quote = False
-        if use_global_name:
-            if use_nick and message["nick"]:
-                global_name_nick = message["nick"]
-            elif message["global_name"]:
-                global_name_nick = message["global_name"]
-            else:
-                global_name_nick = message["username"]
-        else:
-            global_name_nick = ""
+        global_name = get_global_name(message, use_nick) if use_global_name else ""
         content = ""
         if "poll" in message:
             message["content"] = format_poll(message["poll"])
@@ -966,7 +959,7 @@ def generate_chat(messages, roles, channels, max_length, my_id, my_roles, member
                 content += f"[gif sticker] (can be opened): {sticker["name"]}"
 
         message_line = lazy_replace(format_message, "%username", lambda: normalize_string(message["username"], limit_username, emoji_safe=True))
-        message_line = lazy_replace(message_line, "%global_name", lambda: normalize_string(global_name_nick, limit_global_name))
+        message_line = lazy_replace(message_line, "%global_name", lambda: normalize_string(global_name, limit_username))
         message_line = lazy_replace(message_line, "%timestamp", lambda: generate_timestamp(message["timestamp"], format_timestamp, convert_timezone))
         message_line = message_line.replace("%edited", edited_string if edited else "")
         message_line = message_line.replace("%content", content)
@@ -1282,7 +1275,7 @@ def generate_status_line(my_user_data, my_status, unseen, typing, active_channel
         %small_text
         %large_text
     length of the %typing string can be limited with limit_typing
-    use_nick will make it use nick instead username in typing whenever possible.
+    use_nick will make it use nick instead username whenever possible.
     """
     # typing
     if len(typing) == 0:
@@ -1417,7 +1410,7 @@ def generate_status_line(my_user_data, my_status, unseen, typing, active_channel
 
     status_line = (
         format_status_line
-        .replace("%global_name", str(my_user_data["global_name"]))
+        .replace("%global_name", get_global_name(my_user_data, use_nick))
         .replace("%username", my_user_data["username"])
         .replace("%status", status)
         .replace("%custom_status", str(my_status["custom_status"]))
@@ -1511,10 +1504,9 @@ def generate_prompt(my_user_data, active_channel, format_prompt, limit_prompt=15
         %channel
     """
     guild = active_channel["guild_name"]
-    global_name = my_user_data["global_name"] if my_user_data["global_name"] else "Unknown"
     return (
         format_prompt
-        .replace("%global_name", str(global_name)[:limit_prompt])
+        .replace("%global_name", get_global_name(my_user_data, False)[:limit_prompt])
         .replace("%username", my_user_data["username"][:limit_prompt])
         .replace("%server", guild[:limit_prompt] if guild else "DM")
         .replace("%channel", str(active_channel["channel_name"])[:limit_prompt])
@@ -1807,7 +1799,7 @@ def generate_extra_window_search(messages, roles, channels, blocked, total_msg, 
         %channel
     """
     limit_username = config["limit_username"]
-    limit_global_name = config["limit_global_name"]
+    limit_channel_name = config["limit_channel_name"]
     use_nick = config["use_nick_when_available"]
     convert_timezone = config["convert_timezone"]
     blocked_mode = config["blocked_mode"]
@@ -1833,12 +1825,7 @@ def generate_extra_window_search(messages, roles, channels, blocked, total_msg, 
                 })
                 continue
 
-            if use_nick and message["nick"]:
-                global_name_nick = message["nick"]
-            elif message["global_name"]:
-                global_name_nick = message["global_name"]
-            else:
-                global_name_nick = message["username"]
+            global_name = get_global_name(message, use_nick)
 
             channel_name = "Unknown"
             channel_id = message["channel_id"]
@@ -1876,9 +1863,9 @@ def generate_extra_window_search(messages, roles, channels, blocked, total_msg, 
             message_string = (
                 format_message
                 .replace("%username", normalize_string(message["username"], limit_username, emoji_safe=True))
-                .replace("%global_name", normalize_string(str(global_name_nick), limit_global_name, emoji_safe=True))
+                .replace("%global_name", normalize_string(global_name, limit_username, emoji_safe=True))
                 .replace("%date", generate_timestamp(message["timestamp"], format_date, convert_timezone))
-                .replace("%channel", normalize_string(channel_name, limit_global_name, emoji_safe=True))
+                .replace("%channel", normalize_string(channel_name, limit_channel_name, emoji_safe=True))
                 .replace("%content", content)
             )
 
@@ -2037,13 +2024,8 @@ def generate_member_list(member_list_raw, guild_roles, width, use_nick, status_s
         if "id" in member:
 
             # format text
-            if use_nick and member["nick"]:
-                global_name_nick = member["nick"]
-            elif member["global_name"]:
-                global_name_nick = member["global_name"]
-            else:
-                global_name_nick = member["username"]
-            text = f"{status_sign} {global_name_nick}"
+            global_name = get_global_name(member, use_nick)
+            text = f"{status_sign} {global_name}"
 
             # get status color
             if member["status"] == "dnd":
@@ -2051,7 +2033,7 @@ def generate_member_list(member_list_raw, guild_roles, width, use_nick, status_s
             elif member["status"] == "idle":
                 this_format.append([19, 0, 2])
             elif member["status"] == "offline":
-                text = f"  {global_name_nick}"
+                text = f"  {global_name}"
                 #this_format.append([])
             else:   # online
                 this_format.append([18, 0, 2])
