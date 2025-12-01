@@ -1,9 +1,6 @@
-Fix wrong channel sorting, again
-Fix some attachment urls not recognized
-Add click on spoiler to reveal it
-
 Fix emojis in chat removing borders
-Replace @username @role and #channel in input line and notificatons
+Fix wrong channel sorting, again
+Replace @username @role and #channel in input line
 
 Add more extension points
     add to parser.py

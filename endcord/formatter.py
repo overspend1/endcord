@@ -34,8 +34,8 @@ match_md_code_snippet = re.compile(r"(?<!`|\\)`[^`]+`")
 match_md_code_block = re.compile(r"(?s)```.*?```")
 match_md_italic = re.compile(r"\b(?<!\\)(?<!\\_)(((?<=_))?_[^_]+_)\b|(((?<=\*))?\*[^\*]+\*)")
 match_url = re.compile(r"https?:\/\/\w+(\.\w+)+[^\r\n\t\f\v )\]>]*")
-match_discord_channel_url = re.compile(r"https:\/\/discord\.com\/channels\/(\d*)\/(\d*)(?:\/(\d*))?")
-match_discord_channel_combined = re.compile(r"<#(\d*?)>|https:\/\/discord\.com\/channels\/(\d*)\/(\d*)(?:\/(\d*))?")
+match_discord_channel_url = re.compile(r"https:\/\/discord(?:app)?\.com\/channels\/(\d*)\/(\d*)(?:\/(\d*))?")
+match_discord_channel_combined = re.compile(r"<#(\d*?)>|https:\/\/discord(?:app)?\.com\/channels\/(\d*)\/(\d*)(?:\/(\d*))?")
 match_sticker_id = re.compile(r"<;\d*?;>")
 
 
@@ -335,6 +335,8 @@ def replace_channels(text, channels_ids):
             if match.group(1) == channel["id"]:
                 result.append(f"#{channel["name"]}")
                 break
+        else:
+            result.append("*#unknown*")
         last_pos = match.end()
     result.append(text[last_pos:])
     return "".join(result)
@@ -664,7 +666,7 @@ def generate_chat(messages, roles, channels, max_length, my_id, my_roles, member
         0 - no blocking
         1 - mask blocked messages
         2 - hide blocked messages
-    limit_username normalizes length of usernames, by cropping them or appending spaces. Set to None to disable.
+    limit_username normalizes length of username and global_name, by cropping them or appending spaces. Set to None to disable.
     Returned indexes correspond to each message as how many lines it is covering.
     use_nick will make it use nick instead global_name whenever possible.
     """
@@ -749,11 +751,13 @@ def generate_chat(messages, roles, channels, max_length, my_id, my_roles, member
     len_messages = len(messages)
 
     for num, message in enumerate(messages):
+        if not message:   # failsafe
+            continue
         temp_chat = []   # stores only one multiline message
         temp_format = []
         temp_chat_map = []
         mentioned = False
-        edited = message["edited"]
+        edited = message.get("edited")   # failsafe
         user_id = message["user_id"]
         selected_color_spoiler = color_spoiler
 
@@ -892,7 +896,7 @@ def generate_chat(messages, roles, channels, max_length, my_id, my_roles, member
                 temp_format.append(color_mention_reply)
             else:
                 temp_format.append(color_reply)
-            temp_chat_map.append((num, None, True, None, None, None))
+            temp_chat_map.append((num, None, True, None, None, None, None))
 
         # bot interaction
         elif message["interaction"]:
@@ -910,7 +914,7 @@ def generate_chat(messages, roles, channels, max_length, my_id, my_roles, member
                 temp_format.append(color_mention_reply)
             else:
                 temp_format.append(color_reply)
-            temp_chat_map.append((num, None, False, None, None, None))
+            temp_chat_map.append((num, None, False, None, None, None, None))
 
         # main message
         quote = False
@@ -993,7 +997,9 @@ def generate_chat(messages, roles, channels, max_length, my_id, my_roles, member
         spoilers = []
         for match in re.finditer(match_md_spoiler, message_line):
             spoilers.append([match.start(), match.end()])
-        spoilers = spoilers[message.get("spoiled"):]   # exclude spoiled messages
+        spoiled = message.get("spoiled")
+        if spoiled:
+            spoilers = [value for i, value in enumerate(spoilers) if i not in spoiled]   # exclude spoiled messages
 
         # find all markdown and correct format indexes
         message_line, md_format, md_indexes = format_md_all(message_line, pre_content_len, except_ranges + urls)
@@ -1065,7 +1071,8 @@ def generate_chat(messages, roles, channels, max_length, my_id, my_roles, member
 
         temp_chat.append(message_line)
         urls_this_line = urls_multiline_one_line(urls, newline_index+1, 0, quote)
-        temp_chat_map.append((num, (pre_name_len, end_name), False, None, timestamp_range, urls_this_line))
+        spoilers_this_line = urls_multiline_one_line(spoilers, newline_index+1, 0, quote)
+        temp_chat_map.append((num, (pre_name_len, end_name), False, None, timestamp_range, urls_this_line, spoilers_this_line))
 
         # formatting
         if disable_formatting:
@@ -1180,7 +1187,8 @@ def generate_chat(messages, roles, channels, max_length, my_id, my_roles, member
 
             temp_chat.append(new_line)
             urls_this_line = urls_multiline_one_line(urls, len(new_line), newline_len, quote)
-            temp_chat_map.append((num, None, None, None, None, urls_this_line))
+            spoilers_this_line = urls_multiline_one_line(spoilers, len(new_line), newline_len, quote)
+            temp_chat_map.append((num, None, None, None, None, urls_this_line, spoilers_this_line))
 
             # formatting
             if disable_formatting:
@@ -1237,7 +1245,7 @@ def generate_chat(messages, roles, channels, max_length, my_id, my_roles, member
             for reaction in reactions:
                 reactions_map.append([pre_reaction_len + offset, pre_reaction_len + len(reaction) + offset])
                 offset += len(reactions_separator) + len(reaction)
-            temp_chat_map.append((num, None, False, reactions_map, None, None))
+            temp_chat_map.append((num, None, False, reactions_map, None, None, None))
         indexes.append(len(temp_chat))
 
         # invert message lines order and append them to chat
@@ -2061,6 +2069,48 @@ def generate_member_list(member_list_raw, guild_roles, width, use_nick, status_s
         member_list_format.append(this_format)
 
     return member_list, member_list_format
+
+
+def generate_message_notification(data, channels, roles, guild_name, convert_timezone):
+    """Generate message notification title and body"""
+    if data["guild_id"]:
+        # find guild and channel name
+        channel_id = data["channel_id"]
+        channel_name = None
+
+        for channel in channels:
+            if channel["id"] == channel_id and channel.get("permitted"):
+                channel_name = channel["name"]
+                break
+        if guild_name and channel_name:
+            title = f"{data["global_name"] if data["global_name"] else data["username"]} ({guild_name} #{channel_name})"
+        else:
+            title = data["global_name"] if data["global_name"] else data["username"]
+    else:
+        title = data["global_name"] if data["global_name"] else data["username"]
+
+
+
+    if data["content"]:
+        body = replace_spoilers_oneline(data["content"])
+        body = replace_discord_emoji(body)
+        body = replace_mentions(body, data["mentions"])
+        body = replace_roles(body, roles)
+        body = replace_discord_url(body)
+        body = replace_channels(body, channels)
+        body = replace_timestamps(body, convert_timezone)
+    elif data.get("embeds"):
+        num = len(data["embeds"])
+        if num == 1:
+            embed_type = data["embeds"][0]["type"].split("/")[0]
+            embed_type = ("an " if embed_type.startswith(("a", "e", "i", "o", "u")) else "a ") + embed_type
+            body = f"Sent {embed_type}"
+        else:
+            body = f"Sent {num} attachments"
+    else:
+        body = "Unknown content"
+
+    return title, body
 
 
 def generate_tree(dms, guilds, threads, unseen, mentioned, guild_folders, activities, collapsed, uncollapsed_threads, active_channel_id, dd_vline, dd_hline, dd_intersect, dd_corner, dd_pointer, dd_thread, dd_forum, dd_folder, dm_status_char, folder_names=[], safe_emoji=False, show_folders=True):

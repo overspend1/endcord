@@ -43,7 +43,7 @@ uses_pgcurses = tui.uses_pgcurses
 
 logger = logging.getLogger(__name__)
 ENABLE_EXTENSIONS = True
-MESSAGE_UPDATE_ELEMENTS = ("id", "edited", "content", "mentions", "mention_roles", "mention_everyone", "embeds")
+MESSAGE_UPDATE_ELEMENTS = ("id", "content", "mentions", "mention_roles", "mention_everyone", "embeds")
 MEDIA_EMBEDS = ("image", "gifv", "video", "audio", "rich")
 STATUS_STRINGS = ("online", "idle", "dnd", "invisible")
 ERROR_TEXT = "\nUnhandled exception occurred. Please report here: https://github.com/sparklost/endcord/issues"
@@ -1249,7 +1249,7 @@ class Endcord:
                 self.reset_actions()
                 self.update_status_line()
 
-            # set reply
+            # reply
             elif action == 1 and self.messages:
                 self.reset_actions()
                 msg_index = self.lines_to_msg(chat_sel)
@@ -1267,7 +1267,7 @@ class Endcord:
                 self.restore_input_text = (input_text, "standard")
                 self.update_status_line()
 
-            # set edit
+            # edit
             elif action == 2 and self.messages:
                 self.restore_input_text = (input_text, "standard")
                 msg_index = self.lines_to_msg(chat_sel)
@@ -1276,10 +1276,10 @@ class Endcord:
                         self.reset_actions()
                         self.editing = self.messages[msg_index]["id"]
                         self.add_to_store(self.active_channel["channel_id"], input_text)
-                        self.restore_input_text = (self.messages[msg_index]["content"], "edit")
+                        self.restore_input_text = (emoji.demojize(self.messages[msg_index]["content"]), "edit")
                         self.update_status_line()
 
-            # set delete
+            # delete
             elif action == 3 and self.messages:
                 self.restore_input_text = (input_text, "standard")
                 msg_index = self.lines_to_msg(chat_sel)
@@ -1828,6 +1828,7 @@ class Endcord:
                         msg_index = chat_line_map[0]
                         clicked_type = None
                         selected = None
+                        # decode
                         if chat_line_map[1] and chat_line_map[1][0] < mouse_x < chat_line_map[1][1]:
                             clicked_type = 2   # username
                         elif chat_line_map[2]:
@@ -1840,11 +1841,17 @@ class Endcord:
                                     break
                         elif chat_line_map[4] and chat_line_map[4][0] < mouse_x < chat_line_map[4][1]:
                             clicked_type = 1   # message body
-                        elif chat_line_map[5]:   # url/embed
-                            for num, url in enumerate(chat_line_map[5]):
-                                if url[0] < mouse_x < url[1]:
-                                    clicked_type = 5
-                                    url_index = url[2]
+                        else:
+                            if chat_line_map[5]:   # url/embed
+                                for num, url in enumerate(chat_line_map[5]):
+                                    if url[0] < mouse_x < url[1]:
+                                        clicked_type = 5
+                                        url_index = url[2]
+                            if chat_line_map[6]:   # spoiler (owerwries url)
+                                for num, spoiler in enumerate(chat_line_map[6]):
+                                    if spoiler[0] < mouse_x < spoiler[1]:
+                                        clicked_type = 6
+                                        spoiler_index = spoiler[2]
                         # execute
                         if clicked_type == 1 and "deleted" not in self.messages[msg_index]:   # start reply
                             if self.messages[msg_index]["user_id"] == self.my_id:
@@ -1873,7 +1880,7 @@ class Endcord:
                             self.go_replied(msg_index)
                         elif clicked_type == 4 and selected is not None:   # add/remove reaction
                             self.build_reaction(str(selected + 1), msg_index=msg_index)
-                        elif clicked_type == 5:   # click on url
+                        elif clicked_type == 5:   # url
                             urls = self.get_msg_urls_chat(msg_index)
                             url = urls[url_index]
                             embed_url = False
@@ -1895,6 +1902,8 @@ class Endcord:
                             else:
                                 url = self.refresh_attachment_url(url)
                                 webbrowser.open(url, new=0, autoraise=True)
+                        elif clicked_type == 6:
+                            self.spoil(msg_index, spoiler_index)
 
             # mouse single-click on extra line
             elif action == 48:
@@ -2500,8 +2509,9 @@ class Endcord:
                 self.update_extra_line("Uploading is not allowed in this channel.")
 
         elif cmd_type == 10:   # SPOIL
+            spoiler_index = cmd_args.get("num", None)
             msg_index = self.lines_to_msg(chat_sel)
-            self.spoil(msg_index)
+            self.spoil(msg_index, spoiler_index)
 
         elif cmd_type == 11 and self.tree_metadata[tree_sel] and self.tree_metadata[tree_sel]["type"] in (11, 12):   # TOGGLE_THREAD_TREE
             thread_id = self.tree_metadata[tree_sel]["id"]
@@ -3541,12 +3551,22 @@ class Endcord:
         return urls
 
 
-    def spoil(self, msg_index):
-        """Reveal one-by-one spoiler in selected message in chat"""
+    def spoil(self, msg_index, spoiler_index=None):
+        """Reveal specific or one-by-one spoiler in selected message in chat"""
         if "spoiled" in self.messages[msg_index]:
-            self.messages[msg_index]["spoiled"] += 1
+            if not spoiler_index:
+                nums = sorted(self.messages[msg_index]["spoiled"])
+                spoiler_index = 0
+                for num in nums:
+                    if num == spoiler_index:
+                        spoiler_index += 1
+                    elif num > spoiler_index:
+                        break
+            self.messages[msg_index]["spoiled"].append(spoiler_index)
         else:
-            self.messages[msg_index]["spoiled"] = 1
+            if not spoiler_index:
+                spoiler_index = 0
+            self.messages[msg_index]["spoiled"] = [spoiler_index]
         self.update_chat(keep_selected=True, scroll=False)
 
 
@@ -3958,6 +3978,7 @@ class Endcord:
                 self.update_extra_line("Network error.")
             else:
                 self.update_extra_line("No profile information found.")
+                self.viewing_user_data = None
             return
         max_w = self.tui.get_dimensions()[2][1]
         roles = []
@@ -5591,7 +5612,8 @@ class Endcord:
                     if op == "MESSAGE_UPDATE":
                         for element in MESSAGE_UPDATE_ELEMENTS:
                             loaded_message[element] = data[element]
-                            loaded_message["spoiled"] = 0
+                            loaded_message["spoiled"] = []
+                        loaded_message["edited"] = True
                         self.update_chat(scroll=False)
                     elif op == "MESSAGE_DELETE":
                         if self.keep_deleted:
@@ -5656,6 +5678,7 @@ class Endcord:
                     if op == "MESSAGE_UPDATE":
                         for element in MESSAGE_UPDATE_ELEMENTS:
                             loaded_message[element] = data[element]
+                        loaded_message["edited"] = True
                     elif op == "MESSAGE_DELETE":
                         if self.keep_deleted:
                             self.channel_cache[ch_num][1][num]["deleted"] = True
@@ -6236,38 +6259,22 @@ class Endcord:
         """
         if self.enable_notifications and self.my_status["status"] != "dnd":
             data = new_message["d"]
-            if data["guild_id"]:
-                # find guild and channel name
-                guild_id = data["guild_id"]
-                channel_id = data["channel_id"]
+            for guild in self.guilds:
+                if guild["guild_id"] == data["guild_id"]:
+                    guild_name = guild["name"]
+                    channels = guild["channels"]
+                    break
+            else:
                 guild_name = None
-                channel_name = None
-                for guild in self.guilds:
-                    if guild["guild_id"] == guild_id:
-                        guild_name = guild["name"]
-                        break
-                for channel in guild["channels"]:
-                    if channel["id"] == channel_id and channel.get("permitted"):
-                        channel_name = channel["name"]
-                        break
-                if guild_name and channel_name:
-                    title = f"{data["global_name"] if data["global_name"] else data["username"]} ({guild_name} #{channel_name})"
-                else:
-                    title = data["global_name"] if data["global_name"] else data["username"]
-            else:
-                title = data["global_name"] if data["global_name"] else data["username"]
-            if data["content"]:
-                body = data["content"]
-            elif data.get("embeds"):
-                num = len(data["embeds"])
-                if num == 1:
-                    embed_type = data["embeds"][0]["type"].split("/")[0]
-                    embed_type = ("an " if embed_type.startswith(("a", "e", "i", "o", "u")) else "a ") + embed_type
-                    body = f"Sent {embed_type}"
-                else:
-                    body = f"Sent {num} attachments"
-            else:
-                body = "Unknown content"
+                channels = []
+
+            title, body = formatter.generate_message_notification(
+                data,
+                channels,
+                self.current_roles,
+                guild_name,
+                self.config["convert_timezone"],
+            )
             notification_id = peripherals.notify_send(
                 title,
                 body,

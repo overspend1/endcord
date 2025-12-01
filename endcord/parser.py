@@ -401,6 +401,11 @@ def command_string(text):
     # 10 - SPOIL
     elif text_lower.startswith("spoil"):
         cmd_type = 10
+        try:
+            num = int(text.split(" ")[1])
+            cmd_args = {"num": num}
+        except (IndexError, ValueError):
+            pass
 
     # 11 - TOGGLE_THREAD_TREE
     elif text_lower.startswith("toggle_thread_tree"):

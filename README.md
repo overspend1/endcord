@@ -204,9 +204,10 @@ Input line - select a word
 Double click in chat:  
 On message time - start replying to message  
 On message reply line - go to that message  
-On username - view profile
-On reaction - toggle that reaction
-On URL - open media / download file / open in browser
+On username - view profile  
+On reaction - toggle that reaction  
+On URL - open media / download file / open in browser  
+On spoiler - reveal that spoiler  
 
 ### Channel Tree
 If tree object has `>` before the object name, it means it has sub-objects (its drop-down).  
