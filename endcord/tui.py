@@ -1319,12 +1319,12 @@ class TUI():
             if text and not self.disable_drawing:
                 h, w = self.screen.getmaxyx()
                 if not self.win_extra_line:
+                    extra_line_hwyx = (1, w - (self.tree_width + self.bordered + 1), h - self.bordered - 3, self.tree_width + self.bordered + 1)
+                    self.win_extra_line = self.screen.derwin(*extra_line_hwyx)
                     del self.win_chat
                     self.init_chat()
                     if not self.member_list:
                         self.draw_chat(norefresh=True)
-                    extra_line_hwyx = (1, w - (self.tree_width + self.bordered + 1), h - self.bordered - 3, self.tree_width + self.bordered + 1)
-                    self.win_extra_line = self.screen.derwin(*extra_line_hwyx)
                     self.draw_member_list(self.member_list, self.member_list_format, force=True)
                     if self.bordered:
                         self.draw_status_line()
