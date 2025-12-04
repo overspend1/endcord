@@ -74,6 +74,19 @@ Method names can be searched in `./endcord/app.py` code to see where they are ex
 - `on_leave_call` - on end of leave_call
 - `on_call_gateway_event` - in process_call_voice_gateway_events, before event is processed, has event at input and output
 - `on_call_voice_gateway_event` - in process_call_voice_gateway_events, before event is processed, has event at input and output
+- `on_execute_command` - at the start of execute_command, ran only of there are no matched builtin commands
+
+
+## Adding a command
+To add a command:
+1. Add method named `on_execute_command` to extension class, it takes 3 arguments - command text, line selected in chat and line selected in channel tree.
+2. In this method match keyword usually with `cmd_text.startswith("some_text")`, and if needed use regex to match arguments like channel id, numbers etc.
+3. If nothing is matched, return `False`.
+4. If command is matched, execute your code, then return True.
+5. Optionallly add global constant `EXT_COMMAND_ASSIST` with format: `(("command - descriotion", "command"), (...)...)`. It will be appended to builtin commands.
+6. Some commands shouldn't be executed when viewing forum, to check if forum is opened use `if self.app.forum:`
+7. To get message/forum thread object use: `self.messages[self.lines_to_msg(chat_sel)]`
+8. To get metadata for selected object in tree use: `self.tree_metadata[tree_sel]`
 
 
 ## Modifying existing code

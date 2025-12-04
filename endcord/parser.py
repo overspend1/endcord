@@ -695,6 +695,10 @@ def command_string(text):
     elif text_lower.startswith("voice_reject_call"):
         cmd_type = 51
 
+    # 52 - VOICE_TOGGLE_MUTE
+    elif text_lower.startswith("voice_toggle_mute"):
+        cmd_type = 52
+
     # 53 - VOICE_LIST_CALL
     elif text_lower.startswith("voice_list_call"):
         cmd_type = 53

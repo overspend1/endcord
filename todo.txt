@@ -1,11 +1,8 @@
-Add more extension points
-    add to parser.py
-    add to assist_data
-    add to execute_command
-    add binding to tui
-    add to wait_input to execute binding
-    add events to gateway.py
-    add new request to discord.py
+Add extension API for custom bindings
+    Add binding to tui
+    Add to wait_input to execute binding
+Add extension API for custom gateway event handling
+Add extension API for custom request in discord.py
 
 Voice channels
     add voice channels to tree

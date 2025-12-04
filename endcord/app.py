@@ -55,7 +55,7 @@ APP_COMMAND_AUTOCOMPLETE_DELAY = 0.3   # delay for requesting app command autoco
 MB = 1024 * 1024
 USER_UPLOAD_LIMITS = (10*MB, 50*MB, 500*MB, 50*MB)   # premium tier 0, 1, 2, 3 (none, classic, full, basic)
 GUILD_UPLOAD_LIMITS = (10*MB, 10*MB, 50*MB, 100*MB)   # premium tier 0, 1, 2, 3
-FORUM_COMMANDS = (1, 2, 7, 13, 14, 15, 17, 20, 22, 25, 27, 29, 30, 31, 32, 40)
+FORUM_COMMANDS = (1, 2, 7, 13, 14, 15, 17, 20, 22, 25, 27, 29, 30, 31, 32, 40, 42, 49, 50, 51, 52, 53, 55, 56, 57, 58, 66, 67)
 
 match_emoji = re.compile(r"<:(.*):(\d*)>")
 match_youtube = re.compile(r"(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)[a-zA-Z0-9_-]{11}")
@@ -312,6 +312,10 @@ class Endcord:
                 if not callable(ext_class):
                     log_text_invalid.append(f"  {ext_name} - ERROR: Extension class is invalid")
                     continue
+                ext_command_assist = getattr(module, "EXT_COMMAND_ASSIST", None)
+                if ext_command_assist:   # merge assist data
+                    global COMMAND_ASSISTS
+                    COMMAND_ASSISTS += ext_command_assist
                 instance = ext_class(self)
                 self.extensions.append(instance)
                 if ext_app_version != version:
@@ -374,6 +378,17 @@ class Endcord:
         if data is not None:
             return data
         return args
+
+
+    def execute_extensions_method_first(self, method_name, *args):
+        """Execute specific method for each extension if extension has this method, return on method that returns True"""
+        for extension in self.extensions:
+            method = getattr(extension, method_name, None)
+            if callable(method):
+                result = method(*args)
+                if result:
+                    return True
+        return False
 
 
     def profiling_auto_exit(self):
@@ -2130,7 +2145,7 @@ class Endcord:
                     self.tui.instant_assist = False
                     command_type, command_args = parser.command_string(input_text)
                     self.close_extra_window()
-                    self.execute_command(command_type, command_args, chat_sel, tree_sel)
+                    self.execute_command(command_type, command_args, input_text, chat_sel, tree_sel)
                     self.add_to_command_history(input_text)
                     self.command = False
                     continue
@@ -2375,24 +2390,28 @@ class Endcord:
         return True
 
 
-    def execute_command(self, cmd_type, cmd_args, chat_sel, tree_sel):
+    def execute_command(self, cmd_type, cmd_args, cmd_text, chat_sel, tree_sel):
         """Execute custom command"""
         logger.debug(f"Executing command, type: {cmd_type}, args: {cmd_args}")
         reset = True
         self.restore_input_text = (None, None)
         success = False
+        if cmd_type == 0:
+            if cmd_args:
+                self.update_extra_line("Invalid command arguments.")
+            elif self.execute_extensions_method_first("on_call_voice_gateway_event", cmd_text, chat_sel, tree_sel):
+                pass
+            else:
+                self.update_extra_line("Unknown command.")
+            return
+
         if not self.can_run_command(cmd_type):
             self.reset_actions()
             self.update_status_line()
             self.update_extra_line("This command cant be executed in forum.")
             return
-        if cmd_type == 0:
-            if cmd_args:
-                self.update_extra_line("Invalid command arguments.")
-            else:
-                self.update_extra_line("Unknown command.")
 
-        elif cmd_type == 1:   # SET
+        if cmd_type == 1:   # SET
             key = cmd_args["key"]
             value = cmd_args["value"]
             if key in self.config:
@@ -4632,6 +4651,7 @@ class Endcord:
                     self.execute_command(
                         command_type,
                         command_args,
+                        input_text,
                         self.tui.get_chat_selected()[0],
                         self.tui.get_tree_selected(),
                     )
