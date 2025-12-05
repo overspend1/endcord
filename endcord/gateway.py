@@ -973,7 +973,7 @@ class Gateway():
 
                 elif optext == "MESSAGE_CREATE" and "content" in response["d"]:
                     message = response["d"]
-                    if message["channel_id"] in self.subscribed_channels:
+                    if message["channel_id"] in self.subscribed_channels or True:
                         message_done = prepare_message(message)
                         # saving roles to cache
                         if "member" in message and "roles" in message["member"]:
@@ -995,10 +995,12 @@ class Gateway():
                         if message["mentions"]:
                             for mention in message["mentions"]:
                                 mentions.append({
+                                    "username": mention.get("username"),   # spacebar_fix - get
+                                    "global_name": mention.get("global_name"),   # spacebar_fix - get
                                     "id": mention["id"],
                                 })
                         message = prepare_special_message_types(message)
-                        ready_data = {
+                        ready_data = {   # minimal message object so it uses less cpu and ram
                             "id": message["id"],
                             "channel_id": message["channel_id"],
                             "guild_id": message.get("guild_id"),
@@ -1007,6 +1009,7 @@ class Gateway():
                             "mention_roles": message["mention_roles"],
                             "mention_everyone": message["mention_everyone"],
                             "user_id": message["author"]["id"],
+                            "username": message["author"]["username"],
                             "global_name": message["author"].get("global_name"),   # spacebar_fix - get
                         }
                         self.messages_buffer.append({

@@ -154,6 +154,7 @@ def prepare_message(message):
         for mention in message["mentions"]:
             mentions.append({
                 "username": mention.get("username"),   # spacebar_fix - get
+                "global_name": mention.get("global_name"),   # spacebar_fix - get
                 "id": mention["id"],
             })
 

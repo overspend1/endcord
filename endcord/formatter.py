@@ -276,7 +276,7 @@ def replace_discord_emoji(text):
     return "".join(result)
 
 
-def replace_mentions(text, usernames_ids):
+def replace_mentions(text, usernames_ids, global_name=False, use_nick=False):
     """
     Transforms mention string into nicer looking one:
     `some text <@user_id> more text` --> `some text @username more text`
@@ -287,7 +287,7 @@ def replace_mentions(text, usernames_ids):
         result.append(text[last_pos:match.start()])
         for user in usernames_ids:
             if match.group(1) == user["id"]:
-                result.append(f"@{user["username"]}")
+                result.append(f"@{get_global_name(user, use_nick) if global_name else user["username"]}")
                 break
         last_pos = match.end()
     result.append(text[last_pos:])
@@ -861,7 +861,7 @@ def generate_chat(messages, roles, channels, max_length, my_id, my_roles, member
                     content, _ = replace_escaped_md(ref_message["content"])
                     content = replace_spoilers_oneline(content)
                     content = replace_discord_emoji(content)
-                    content = replace_mentions(content, ref_message["mentions"])
+                    content = replace_mentions(content, ref_message["mentions"], global_name=use_global_name, use_nick=use_nick)
                     content = replace_roles(content, roles)
                     content = replace_discord_url(content)
                     content = replace_channels(content, channels)
@@ -929,7 +929,7 @@ def generate_chat(messages, roles, channels, max_length, my_id, my_roles, member
             message["content"] = format_poll(message["poll"])
         if message["content"]:
             content = replace_discord_emoji(message["content"])
-            content = replace_mentions(content, message["mentions"])
+            content = replace_mentions(content, message["mentions"], global_name=use_global_name, use_nick=use_nick)
             content = replace_roles(content, roles)
             content = replace_discord_url(content)
             content = replace_channels(content, channels)
@@ -1816,6 +1816,7 @@ def generate_extra_window_search(messages, roles, channels, blocked, total_msg, 
     format_date = config["format_forum_timestamp"]
     emoji_as_text = config["emoji_as_text"]
     format_message = config["format_search_message"]
+    use_global_name = "%global_name" in format_message
 
     if pinned:
         title_line = f"Pinned_messages ({total_msg}):"
@@ -1835,7 +1836,7 @@ def generate_extra_window_search(messages, roles, channels, blocked, total_msg, 
                 })
                 continue
 
-            global_name = get_global_name(message, use_nick)
+            global_name = get_global_name(message, use_nick) if use_global_name else ""
 
             channel_name = "Unknown"
             channel_id = message["channel_id"]
@@ -1847,7 +1848,7 @@ def generate_extra_window_search(messages, roles, channels, blocked, total_msg, 
             content = ""
             if message["content"]:
                 content = replace_discord_emoji(message["content"])
-                content = replace_mentions(content, message["mentions"])
+                content = replace_mentions(content, message["mentions"], global_name=use_global_name, use_nick=use_nick)
                 content = replace_roles(content, roles)
                 content = replace_discord_url(content)
                 content = replace_channels(content, channels)
@@ -2073,7 +2074,7 @@ def generate_member_list(member_list_raw, guild_roles, width, use_nick, status_s
     return member_list, member_list_format
 
 
-def generate_message_notification(data, channels, roles, guild_name, convert_timezone):
+def generate_message_notification(data, channels, roles, guild_name, convert_timezone, use_global_name=False, use_nick=False):
     """Generate message notification title and body"""
     if data["guild_id"]:
         # find guild and channel name
@@ -2085,18 +2086,16 @@ def generate_message_notification(data, channels, roles, guild_name, convert_tim
                 channel_name = channel["name"]
                 break
         if guild_name and channel_name:
-            title = f"{data["global_name"] if data["global_name"] else data["username"]} ({guild_name} #{channel_name})"
+            title = f"{get_global_name(data, use_nick) if use_global_name else data["username"]} ({guild_name} #{channel_name})"
         else:
-            title = data["global_name"] if data["global_name"] else data["username"]
+            title = get_global_name(data, use_nick) if use_global_name else data["username"]
     else:
-        title = data["global_name"] if data["global_name"] else data["username"]
-
-
+        title = get_global_name(data, use_nick) if use_global_name else data["username"]
 
     if data["content"]:
         body = replace_spoilers_oneline(data["content"])
         body = replace_discord_emoji(body)
-        body = replace_mentions(body, data["mentions"])
+        body = replace_mentions(body, data["mentions"], global_name=use_global_name, use_nick=use_nick)
         body = replace_roles(body, roles)
         body = replace_discord_url(body)
         body = replace_channels(body, channels)

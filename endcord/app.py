@@ -6320,22 +6320,31 @@ class Endcord:
                         break
 
             # collect data
+            guild_id = data["guild_id"]
             for guild in self.guilds:
-                if guild["guild_id"] == data["guild_id"]:
+                if guild["guild_id"] == guild_id:
                     guild_name = guild["name"]
                     channels = guild["channels"]
                     break
             else:
                 guild_name = None
                 channels = []
+            for guild in self.roles:
+                if guild["guild_id"] == guild_id:
+                    guild_roles = guild["roles"]
+                    break
+            else:
+                guild_roles = []
 
             # build and send notification
             title, body = formatter.generate_message_notification(
                 data,
                 channels,
-                self.current_roles,
+                guild_roles,
                 guild_name,
                 self.config["convert_timezone"],
+                use_global_name=("%global_name" in self.config["format_message"]),
+                use_nick=self.config["use_nick_when_available"],
             )
             notification_id = peripherals.notify_send(
                 title,
