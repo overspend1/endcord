@@ -6,7 +6,44 @@ on:
       - '[0-9]*.[0-9]*.[0-9]*'
 
 jobs:
+  detect_minor_bump:
+    runs-on: ubuntu-latest
+    outputs:
+      is_minor: ${{ steps.check.outputs.is_minor }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-tags: true
+
+      - name: Get previous tag
+        id: prev
+        run: |
+          PREV=$(git tag --sort=-v:refname | sed -n '2p')
+          echo "prev=$PREV" >> $GITHUB_OUTPUT
+
+      - name: Compare versions
+        id: check
+        run: |
+          CUR="${GITHUB_REF_NAME}"
+          PREV="${{ steps.prev.outputs.prev }}"
+
+          # Extract MINOR numbers
+          CUR_MINOR=$(echo "$CUR" | cut -d. -f2)
+          PREV_MINOR=$(echo "$PREV" | cut -d. -f2)
+
+          if [ "$CUR_MINOR" != "$PREV_MINOR" ]; then
+            echo "is_minor=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_minor=false" >> $GITHUB_OUTPUT
+          fi
+
+
   build:
+    needs: detect_minor_bump
+    if: |
+      matrix.os != 'macos-15' &&
+      matrix.os != 'macos-15-intel' ||
+      needs.detect_minor_bump.outputs.is_minor == 'true'
     name: build (${{ matrix.os }}, ${{ matrix.python-version }}${{ matrix.clang && format(', {0}', matrix.clang-version) || '' }})
     strategy:
       matrix:

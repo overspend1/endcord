@@ -19,6 +19,8 @@ if sys.platform == "win32":
     BACKSPACE = 8   # i cant believe this
 else:
     BACKSPACE = curses.KEY_BACKSPACE
+BUTTON4_PRESSED = getattr(curses, "BUTTON4_PRESSED", 0)
+BUTTON5_PRESSED = getattr(curses, "BUTTON5_PRESSED", 0)
 match_word = re.compile(r"\w")
 match_split = re.compile(r"[^\w']")
 match_spaces = re.compile(r" {3,}")
@@ -2666,9 +2668,9 @@ class TUI():
                     return self.mouse_double_click(x, y)
                 self.first_click = new_click
                 return self.mouse_single_click(x, y)
-            if bstate & curses.BUTTON4_PRESSED:
+            if bstate & BUTTON4_PRESSED:
                 self.mouse_scroll(x, y, True)
-            elif bstate & curses.BUTTON5_PRESSED:
+            elif bstate & BUTTON5_PRESSED:
                 self.mouse_scroll(x, y, False)
             return None
 
