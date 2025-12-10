@@ -48,12 +48,12 @@ Discord token is required in order to run endcord! see [Token](#token).
 - Show reactions, replied message, forwarded message
 - Show embeds, attachment types and links, code blocks
 - Spellchecking
-- Type message in external editor
+- Advanced input line operations and ability to use external editor
 - Tabs
 - Assist when typing channel/username/role/emoji/sticker
 - Search, preview and send gifs
 - Record and send voice messages
-- Undo/Redo in input line
+- `s/old/new` replacement with extended regex
 - Open link in browser
 - Unlimited chat scrolling
 - Keep deleted messages (OFF by default)
@@ -298,6 +298,16 @@ If `skip_app_command_assist = True` in config, then all app commands are shown i
 To add default emoji in message just type its name or alias, like this: `:thumbs_up:`  
 For now, there is no emoji assist, but it is planned.  
 Emoji names can be found [here](https://unicode.org/emoji/charts/full-emoji-list.html) and aliases [here](https://www.webfx.com/tools/emoji-cheat-sheet/).  
+
+# s/ replacements with regex
+Type `s/old/new` as a message and send it to edit your last message by replacing `old` with `new`.  
+Note that this is using regex. And is very simmilar to how sed works.  
+Features other than full regex support:
+- Full regex support
+- Append `/g` to repeat for all matches
+- Append `/i` to enable case-insensitive search
+- `&` in the replacement portion represents the entire matched pattern from the search portion.
+- `\NUMBER` in the replacement portion represents capture groups in the search portion
 
 # Tabs
 Tabs are "pinned" channels in channel cache, and are counted in channel cache limit.  

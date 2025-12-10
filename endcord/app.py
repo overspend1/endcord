@@ -277,7 +277,7 @@ class Endcord:
         self.gateway.set_want_member_list(self.get_members)
         self.gateway.set_want_summaries(self.save_summaries)
         self.timed_extra_line = threading.Event()
-        self.log_queue_nanager = None
+        self.log_queue_manager = None
         # threading.Thread(target=self.profiling_auto_exit, daemon=True).start()
         self.discord.get_voice_regions()
         if config["extensions"] and ENABLE_EXTENSIONS:
@@ -621,9 +621,9 @@ class Endcord:
         logger.debug(f"Switching channel, has_id: {bool(channel_id)}, has_guild: {bool(guild_id)}, has hint: {bool(parent_hint)}")
 
         # stop log watcher so it doesnt interfere with chat generation
-        if self.log_queue_nanager:
-            self.log_queue_nanager.stop()
-            self.log_queue_nanager = None
+        if self.log_queue_manager:
+            self.log_queue_manager.stop()
+            self.log_queue_manager = None
 
         # save deleted
         if self.keep_deleted:
@@ -4284,16 +4284,16 @@ class Endcord:
         self.tui.update_chat(self.chat, self.chat_format)
 
         # start log watche thread
-        if not self.log_queue_nanager:
+        if not self.log_queue_manager:
             threading.Thread(target=self.log_watcher, daemon=True, args=(log, )).start()
 
 
     def log_watcher(self, log=[]):
         """Thread that looks for log changes and updates it in chat area"""
-        self.log_queue_nanager = log_queue.LogQueueManager()
-        self.log_queue_nanager.start()
+        self.log_queue_manager = log_queue.LogQueueManager(max_size=self.limit_chat_buffer*2)
+        self.log_queue_manager.start()
         while self.run:
-            new_log_entry = self.log_queue_nanager.get_log_entry()
+            new_log_entry = self.log_queue_manager.get_log_entry()
             log.append(new_log_entry)
             if len(log) > 100:
                 log.pop(0)
@@ -4312,9 +4312,9 @@ class Endcord:
             self.tui.update_chat(self.chat, self.chat_format)
             if self.active_channel["channel_id"]:   # failsafe
                 break
-        if self.log_queue_nanager:
-            self.log_queue_nanager.stop()
-            self.log_queue_nanager = None
+        if self.log_queue_manager:
+            self.log_queue_manager.stop()
+            self.log_queue_manager = None
 
 
     def build_reaction(self, text, msg_index=None):
@@ -4890,7 +4890,7 @@ class Endcord:
             if last_acked_unreads_line and (not last_message_id or int(last_acked_unreads_line) < int(last_message_id)):
                 last_seen_msg = channel["last_acked_unreads_line"]
 
-        self.chat, self.chat_format, self.chat_indexes, self.chat_map = formatter.generate_chat(
+        self.chat, self.chat_format, self.chat_indexes, self.chat_map, wide_map = formatter.generate_chat(
             self.messages,
             self.current_roles,
             self.current_channels,
@@ -4905,6 +4905,7 @@ class Endcord:
             self.show_blocked_messages,
             self.config,
         )
+        self.tui.set_wide_map(wide_map)
 
         if keep_selected:
             selected_msg = selected_msg + change_amount
@@ -6824,16 +6825,17 @@ class Endcord:
                 self.update_tree()
                 self.update_status_line()
 
-            # check changes in dimensions
+            # check for changes in dimensions
             new_chat_dim = self.tui.get_dimensions()[0]
             if new_chat_dim != self.chat_dim:
-                self.chat_dim = new_chat_dim
-                self.execute_extensions_methods("on_resize")
-                if self.forum:
-                    self.update_forum(self.active_channel["guild_id"], self.active_channel["channel_id"])
-                    self.tui.update_chat(self.chat, self.chat_format, scroll=False)
-                else:
-                    self.update_chat(scroll=False)
+                if self.chat_dim[1] != new_chat_dim[1]:
+                    self.execute_extensions_methods("on_resize")
+                    if self.forum:
+                        self.update_forum(self.active_channel["guild_id"], self.active_channel["channel_id"])
+                        self.tui.update_chat(self.chat, self.chat_format, scroll=False)
+                    else:
+                        self.chat_dim = new_chat_dim
+                        self.update_chat(scroll=False)
                 if self.most_recent_incoming_call or self.active_channel["channel_id"] in self.incoming_calls:
                     new_permanent_extra_line = None
                     if self.most_recent_incoming_call:
@@ -6858,6 +6860,7 @@ class Endcord:
                 if self.tui.get_dimensions()[1] != self.tree_dim:
                     self.update_tree()
                     self.tree_dim = self.tui.get_dimensions()[1]
+                self.chat_dim = new_chat_dim
 
             # check and update my status
             new_status = self.gateway.get_my_status()

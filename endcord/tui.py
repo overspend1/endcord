@@ -285,6 +285,7 @@ class TUI():
         self.title_tree_txt = ""
         self.chat_buffer = []
         self.chat_format = []
+        self.wide_map = []
         self.tree = []
         self.tree_format = []
         self.tree_clean_len = 0
@@ -1237,6 +1238,26 @@ class TUI():
                     self.resize()
 
 
+    def set_wide_map(self, wide_map):
+        """Update wide characters map"""
+        self.wide_map = wide_map
+
+
+    def clear_chat_wide(self):
+        """Clear specific chat lines that are containing emoji"""
+        h, w = self.win_chat.getmaxyx()
+        for y in self.wide_map:
+            chat_y = y - self.chat_index
+            if chat_y <= 0:
+                continue
+            if chat_y > h:
+                break
+            self.win_chat.insstr(h - chat_y, 0, " " * w, curses.color_pair(1))
+        self.win_chat.noutrefresh()
+        self.need_update.set()
+        time.sleep(self.screen_update_delay/2)
+
+
     def draw_tree(self):
         """Draw channel tree"""
         with self.lock:
@@ -1477,6 +1498,8 @@ class TUI():
                 while y < h:
                     self.win_extra_window.insstr(y, 0, "\n", curses.color_pair(1))
                     y += 1
+                # self.draw_chat(norefresh=True)
+                # chat will be redrawn when app main loop detects change in dimensions
                 self.win_extra_window.noutrefresh()
                 self.need_update.set()
 
@@ -1507,6 +1530,7 @@ class TUI():
                     self.draw_status_line()
                 self.draw_extra_line(self.extra_line_text)
                 self.draw_member_list(self.member_list, self.member_list_format, force=True)
+                # chat will be regenerated and resized in app main loop
 
 
     def draw_member_list(self, member_list, member_list_format, force=False, reset=False):
@@ -1523,8 +1547,11 @@ class TUI():
                     if not force and self.win_member_list:
                         self.mlist_selected = -1
                         self.mlist_index = 0
+                    self.clear_chat_wide()
                     common_h = self.init_chat()
-                    self.draw_chat(norefresh=True)
+                    # chat will be regenerated and resized in app main loop
+
+                    # init member list
                     member_list_hwyx = (
                         common_h,
                         self.member_list_width - self.bordered,
@@ -1542,6 +1569,7 @@ class TUI():
                     else:
                         self.screen.vline(1, w - self.member_list_width-1, self.vert_line, common_h, curses.color_pair(self.default_color))
 
+                # draw member list
                 h, w = self.win_member_list.getmaxyx()
                 w -= 1
                 y = 0
@@ -1587,7 +1615,9 @@ class TUI():
                 self.need_update.set()
             time.sleep(self.screen_update_delay/2)
 
+            # remove member list and redraw chat
             with self.lock:
+                self.clear_chat_wide()
                 del (self.win_member_list, self.win_chat)
                 self.member_list = []
                 self.member_list_format = []
@@ -1599,7 +1629,7 @@ class TUI():
                     self.win_title_line = self.screen.derwin(*title_line_hwyx)
                     self.title_hw = self.win_title_line.getmaxyx()
                     self.draw_title_line()
-                self.draw_chat()
+                # self.draw_chat()   # chat will be regenerated and resized in app main loop
 
 
     def set_cursor_color(self, color_id):

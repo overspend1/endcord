@@ -178,7 +178,7 @@ Note: always put string in `""`. To use `"` inside the string escape it like thi
 - `format_reactions = "[REACT]                ╰──< %reactions"`  
     Formatting for message reactions string. It is bellow last newline string. See [format_reactions](#format_reactions) for more info.
 - `format_interaction = "                       ╭──⤙ %global_name used [%command]"`  
-    Formatting for bot interaction string. It is above message base. Only `%username`, `global_name` and `%command` options are available.
+    Formatting for bot interaction string. It is above message base. See [format_interaction](#format_interaction)
 - `format_one_reaction = "%count:%reaction"`  
     Formatting for single reaction string. Reactions string is assembled by joining these strings with `reactions_separator` in between. See [format_one_reaction](#format_one_reaction) for more info.
 - `format_timestamp = "%H:%M"`  
@@ -335,7 +335,7 @@ Every next list has additional `start` and `end`- indexes on a line where color 
 - `%username` - of message author
 - `%global_name` - of message author
 - `%timestamp` - formatted with `format_timestamp`
-- `%edited` - replaced with `edited_string`  
+- `%edited` - replaced with `edited_string` assumed to be at the end of format_message line  
 Note: everything after `%content` may be pushed to newline.
 
 ### format_newline
@@ -355,6 +355,11 @@ Note: everything after `%content` may be pushed to newline.
 ### format_one_reaction
 - `%reaction` - reaction emoji or emoji name
 - `%count` - count of this same reaction
+
+### format_interaction
+- `%username` - of the user who used the command
+- `%global_name` - of the user who used the command
+- `%command` - the command that user executed
 
 ### format_status
 - `%global_name` - my global name

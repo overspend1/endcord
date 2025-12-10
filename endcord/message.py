@@ -35,8 +35,7 @@ def prepare_embeds(embeds, message_content):
         skip_main_url = False
         embed_type = embed.get("type", "unknown")
         if "tenor.com/" not in embed.get("url", ""):
-            if embed_type not in ("image", "video"):
-                content += get_newlined_value(embed, "url")
+            content += get_newlined_value(embed, "url")
             main_url = embed.get("url")
             skip_main_url = True
         content += get_newlined_value(embed, "title")

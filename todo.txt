@@ -1,6 +1,3 @@
-Add %filler to message format strings
-Add s/old/new for regex replace
-
 Voice channels
     add voice channels to tree
     show voice channel activity
@@ -15,10 +12,6 @@ Voice calls
     send and receive RTCP?
     send speaking event?
 
-Add flatpack
-Fix issues with spellchecker
-Downlaod 50 messages by default, but do incremental download, and draw on 25 then on 50
-Optimize self.guilds by using dicts, each guild/channel is keyed with its id; if its worth it
 Optimize main loop with queues and threading
 Fix member list not updating when switching between same-guild channels
 Vim-like bindings

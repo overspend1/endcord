@@ -287,6 +287,26 @@ def normalize_string(input_string, max_length, emoji_safe=False, dots=False, fil
     return input_string
 
 
+def normalize_string_count(input_string, max_length, dots=False, fill=True):
+    """
+    Normalize length of string, by cropping it or appending spaces.
+    Set max_length to None to disable.
+    Also return count of wide characters.
+    """
+    input_string = str(input_string)
+    if not max_length:
+        return input_string
+    if dots:
+        dots = len(input_string) > max_length
+    input_string, length = limit_width_wch(input_string, max_length)
+    diff = length - len(input_string[:max_length])
+    if fill:
+        input_string += " " * (max_length - length)
+    if dots:
+        return input_string[:-3] + " " * (len_wch(input_string[-3:]) - 3) + "...", diff
+    return input_string, diff
+
+
 def replace_discord_emoji(text):
     """
     Transform emoji strings into nicer looking ones:
@@ -787,6 +807,7 @@ def generate_chat(messages, roles, channels, max_length, my_id, my_roles, member
     chat_format = []
     indexes = []
     chat_map = []   # ((num, username:(st, end), is_reply, reactions:((st, end), ...), date:(st, end), url:(st, end, index)), ...)
+    wide_map = []
     len_edited = len(edited_string)
     enable_separator = format_date and date_separator
     have_unseen_messages_line = False
@@ -829,6 +850,8 @@ def generate_chat(messages, roles, channels, max_length, my_id, my_roles, member
         .split("\n")[0],
     ) - 1
     newline_len = len(format_newline
+        .replace("%username", normalize_string("Unknown", limit_username))
+        .replace("%global_name", normalize_string("Unknown", limit_username))
         .replace("%timestamp", placeholder_timestamp)
         .replace("%content", ""),
         )
@@ -846,6 +869,7 @@ def generate_chat(messages, roles, channels, max_length, my_id, my_roles, member
         temp_chat = []   # stores only one multiline message
         temp_format = []
         temp_chat_map = []
+        temp_wide_map = []
         mentioned = False
         edited = message.get("edited")   # failsafe
         user_id = message["user_id"]
@@ -978,7 +1002,9 @@ def generate_chat(messages, roles, channels, max_length, my_id, my_roles, member
                 reply_line = lazy_replace(reply_line, "%global_name", lambda: normalize_string("Unknown", limit_username))
                 reply_line = reply_line.replace("%timestamp", placeholder_timestamp)
                 reply_line = lazy_replace(reply_line, "%content", lambda: ref_message["content"].replace("\r", "").replace("\n", ""))
-            reply_line = normalize_string(reply_line, max_length, emoji_safe=True, dots=True)
+            reply_line, wide = normalize_string_count(reply_line, max_length, dots=True)
+            if wide:
+                temp_wide_map.append(len(temp_chat))
             temp_chat.append(reply_line)
             if disable_formatting or reply_color_format == color_blocked:
                 temp_format.append([color_base])
@@ -996,7 +1022,9 @@ def generate_chat(messages, roles, channels, max_length, my_id, my_roles, member
                 .replace("%global_name", get_global_name(message["interaction"], use_nick)[:limit_username])
                 .replace("%command", message["interaction"]["command"])
             )
-            interaction_line = normalize_string(interaction_line, max_length, emoji_safe=True, dots=True)
+            interaction_line, wide = normalize_string_count(interaction_line, max_length, dots=True)
+            if wide:
+                temp_wide_map.append(len(temp_chat))
             temp_chat.append(interaction_line)
             if disable_formatting or reply_color_format == color_blocked:
                 temp_format.append([color_base])
@@ -1161,6 +1189,8 @@ def generate_chat(messages, roles, channels, max_length, my_id, my_roles, member
         if code_block_format:
             message_line = message_line.ljust(max_length-1)
 
+        if wide:
+            temp_wide_map.append(len(temp_chat))
         temp_chat.append(message_line)
         urls_this_line = urls_multiline_one_line(urls, newline_index+1, 0, quote)
         spoilers_this_line = urls_multiline_one_line(spoilers, newline_index+1, 0, quote)
@@ -1282,6 +1312,8 @@ def generate_chat(messages, roles, channels, max_length, my_id, my_roles, member
                 new_line = new_line.ljust(max_length-1)
             len_new_line = len(new_line)
 
+            if wide:
+                temp_wide_map.append(len(temp_chat))
             temp_chat.append(new_line)
             urls_this_line = urls_multiline_one_line(urls, len_new_line, newline_len, quote)
             spoilers_this_line = urls_multiline_one_line(spoilers, len_new_line, newline_len, quote)
@@ -1329,7 +1361,9 @@ def generate_chat(messages, roles, channels, max_length, my_id, my_roles, member
                 )
             reactions_line = lazy_replace(format_reactions, "%timestamp", lambda: generate_timestamp(message["timestamp"], format_timestamp, convert_timezone))
             reactions_line = reactions_line.replace("%reactions", reactions_separator.join(reactions))
-            reactions_line = normalize_string(reactions_line, max_length-1, emoji_safe=True, dots=True, fill=True)
+            reactions_line, wide = normalize_string_count(reactions_line, max_length, dots=True, fill=True)
+            if wide:
+                temp_wide_map.append(len(temp_chat))
             temp_chat.append(reactions_line)
             if disable_formatting:
                 temp_format.append([color_base])
@@ -1347,10 +1381,11 @@ def generate_chat(messages, roles, channels, max_length, my_id, my_roles, member
 
         # invert message lines order and append them to chat
         # it is inverted because chat is drawn from down to upside
+        wide_map.extend([len(chat) + len(temp_chat) - x for x in temp_wide_map])
         chat.extend(temp_chat[::-1])
         chat_format.extend(temp_format[::-1])
         chat_map.extend(temp_chat_map[::-1])
-    return chat, chat_format, indexes, chat_map
+    return chat, chat_format, indexes, chat_map, wide_map
 
 
 def generate_status_line(my_user_data, my_status, unseen, typing, active_channel, action, tasks, tabs, tabs_format, format_status_line, format_rich, slowmode=None, limit_typing=30, use_nick=True, fun=True):
