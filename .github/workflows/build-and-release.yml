@@ -75,13 +75,12 @@ jobs:
       contents: read
       actions: write
 
-    if: |
-      matrix.os != 'macos-15' &&
-      matrix.os != 'macos-15-intel' ||
-      needs.detect_minor_bump.outputs.is_minor == 'true'
-
     steps:
       - uses: actions/checkout@v5
+
+      - name: Skip macOS unless minor bump
+        if: ${{ (matrix.os == 'macos-15' || matrix.os == 'macos-15-intel') && needs.detect_minor_bump.outputs.is_minor != 'true' }}
+        run: exit 0
 
       ## uncomment to enable caching with artifacts
       # - name: Set CCACHE_DIR environment variable
