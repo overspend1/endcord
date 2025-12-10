@@ -1396,8 +1396,16 @@ class TUI():
                     self.win_extra_line = self.screen.derwin(*extra_line_hwyx)
                     del self.win_chat
                     self.init_chat()
-                    if not self.member_list:
-                        self.draw_chat(norefresh=True)
+                    self.draw_chat(norefresh=True)
+                    if self.member_list and self.bordered:   # have to redraw member list borders
+                        h, w = self.screen.getmaxyx()
+                        member_list_hwyx = (
+                            h - (2 + bool(self.win_extra_line)) - self.have_title - 2*self.bordered,
+                            self.member_list_width - self.bordered,
+                             self.bordered or self.have_title,
+                            w - self.member_list_width,
+                        )
+                        self.draw_border(member_list_hwyx, top=not(self.have_title))
                     self.draw_member_list(self.member_list, self.member_list_format, force=True)
                     if self.bordered:
                         self.draw_status_line()
@@ -1421,9 +1429,8 @@ class TUI():
                 self.win_extra_line = None
                 self.init_chat()
                 self.chat_hw = self.win_chat.getmaxyx()
-                if not self.member_list:
-                    self.draw_chat()
-                elif self.bordered:   # have to redraw member list borders
+                self.draw_chat()
+                if self.member_list and self.bordered:   # have to redraw member list borders
                     h, w = self.screen.getmaxyx()
                     member_list_hwyx = (
                         h - (2 + bool(self.win_extra_line)) - self.have_title - 2*self.bordered,
@@ -1498,8 +1505,7 @@ class TUI():
                 while y < h:
                     self.win_extra_window.insstr(y, 0, "\n", curses.color_pair(1))
                     y += 1
-                # self.draw_chat(norefresh=True)
-                # chat will be redrawn when app main loop detects change in dimensions
+                self.draw_chat(norefresh=True)
                 self.win_extra_window.noutrefresh()
                 self.need_update.set()
 
@@ -1530,7 +1536,7 @@ class TUI():
                     self.draw_status_line()
                 self.draw_extra_line(self.extra_line_text)
                 self.draw_member_list(self.member_list, self.member_list_format, force=True)
-                # chat will be regenerated and resized in app main loop
+                self.draw_chat()
 
 
     def draw_member_list(self, member_list, member_list_format, force=False, reset=False):
