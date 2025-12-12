@@ -1420,6 +1420,7 @@ class TUI():
                     self.win_extra_line.insstr(0, 0, text + " " * (w - len(text)) + "\n", curses.color_pair(11) | self.attrib_map[11])
                 self.win_extra_line.noutrefresh()
                 self.need_update.set()
+            self.draw_chat()
 
 
     def remove_extra_line(self):
@@ -1444,6 +1445,7 @@ class TUI():
                 if self.bordered:
                     self.draw_status_line()
                 self.draw_member_list(self.member_list, self.member_list_format, force=True)
+            self.draw_chat()
 
 
     def draw_extra_window(self, title_txt, body_text, select=False, start_zero=False):
@@ -1543,6 +1545,8 @@ class TUI():
 
     def draw_member_list(self, member_list, member_list_format, force=False, reset=False):
         """Draw member list and resize chat"""
+        import traceback
+        logger.info("".join(traceback.format_stack()))
         with self.lock:
             self.member_list = member_list
             self.member_list_format = member_list_format

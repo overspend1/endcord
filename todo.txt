@@ -1,4 +1,5 @@
 Fix not removing ghost pings, unreads and notifications
+Fix not removing notification when open channel
 Fix viewing sticker
 Fix unreads line not removing and apearing after removed
 Optimize member roles by making them a dict

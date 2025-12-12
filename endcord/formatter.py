@@ -646,9 +646,9 @@ def clean_type(embed_type):
 
 def get_global_name(data, use_nick):
     """Get nick or global name, fallback to username"""
-    if use_nick and "nick" in data and data["nick"]:
+    if use_nick and data.get("nick"):
         return data["nick"]
-    if data["global_name"]:
+    if data.get("global_name"):
         return data["global_name"]
     return data["username"]
 
