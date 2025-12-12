@@ -108,8 +108,9 @@ class Discord():
             "Sec-Fetch-Mode": "cors",
             "Sec-Fetch-Site": "cross-site",
             "User-Agent": user_agent,
-            "X-Super-Properties": client_prop,
         }
+        if client_prop:
+            self.header["X-Super-Properties"] = client_prop
         self.user_agent = user_agent
         self.proxy = urllib.parse.urlsplit(proxy)
         self.my_id = self.get_my_id(exit_on_error=True)

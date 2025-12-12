@@ -127,7 +127,8 @@ class Endcord:
         self.external_editor = config["external_editor"]
         self.limit_command_history = config["limit_command_history"]
         self.remove_prev_notif = ["remove_previous_notification"]
-        self.emoji_as_text = self.config["emoji_as_text"]
+        self.emoji_as_text = config["emoji_as_text"]
+        send_x_super = config["send_x_super_properties"]
 
         if not self.external_editor or not shutil.which(self.external_editor):
             self.external_editor = os.environ.get("EDITOR", "nano")
@@ -203,6 +204,9 @@ class Endcord:
         self.chat = []
         self.chat.insert(0, f"Connecting to {self.config["custom_host"] if self.config["custom_host"] else "Discord"}")
         logger.info(f"Connecting to {self.config["custom_host"] if self.config["custom_host"] else "Discord"}")
+
+        if not send_x_super:
+            client_prop = None
 
         # initialize stuff
         self.discord = discord.Discord(
