@@ -37,7 +37,7 @@ QOS_HEARTBEAT = True
 QOS_PAYLOAD = {"ver": 26, "active": True, "reason": "foregrounded"}
 inflator = zlib.decompressobj()
 logger = logging.getLogger(__name__)
-code_unpacker = struct.Struct("!H")
+status_unpacker = struct.Struct("!H")
 
 
 def zlib_decompress(data):
@@ -205,6 +205,19 @@ class Gateway():
             self.ws.connect(gateway_url + "/?v=9&encoding=json&compress=zlib-stream", header=self.header)
 
 
+    def disconnect_ws(self, timeout=2, status=1000):
+        """Close websocket with timeout"""
+        if self.ws:
+            try:
+                self.ws.settimeout(timeout)
+                self.ws.close(status=status)
+                logger.info(f"Disconnected with status code {status}")
+            except Exception as e:
+                logger.warn("Error closing websocket:", e)
+            finally:
+                self.ws = None
+
+
     def connect(self):
         """Create initial connection to Discord gateway"""
         # get proxy
@@ -276,7 +289,7 @@ class Gateway():
             self.reconnect_requested = True
 
 
-    def add_member_roles(self, guild_id, user_id, roles, nonce=None):
+    def add_member_roles(self, guild_id, user_id, roles, nick=None, nonce=None):
         """Add member-role pair to corresponding guild, number of users per guild is limited"""
         num = -1
         for num, guild in enumerate(self.member_roles):
@@ -294,6 +307,7 @@ class Gateway():
         self.member_roles[num]["members"].insert(0, {
             "user_id": user_id,
             "roles": roles,
+            "nick": nick,
         })
         if len(self.member_roles[num]) > LOCAL_MEMBER_COUNT:
             self.member_roles[num].pop(-1)
@@ -594,10 +608,11 @@ class Gateway():
                 if not data:
                     self.resumable = True
                     break
-                code = code_unpacker.unpack(data[0:2])[0]
+                status = status_unpacker.unpack(data[0:2])[0]
                 reason = data[2:].decode("utf-8", "replace")
-                logger.warning(f"Gateway error code: {code}, reason: {reason}")
-                self.resumable = code in (4000, 4009)
+                if status not in (1000, 1001):
+                    logger.warning(f"Gateway status code: {status}, reason: {reason}")
+                self.resumable = status in (4000, 4009)
                 break
             try:
                 data = zlib_decompress(data)
@@ -978,6 +993,7 @@ class Gateway():
                             message.get("guild_id"),
                             message["author"]["id"],
                             message["member"]["roles"],
+                            nick=message["member"].get("nick"),
                             nonce=message["channel_id"],
                         )
                     message_done = prepare_message(message)
@@ -1120,6 +1136,7 @@ class Gateway():
                                     guild_id,
                                     member["user"]["id"],
                                     member["roles"],
+                                    nick=member.get("nick"),
                                 )
                                 if data.get("nonce"):
                                     self.roles_changed = data["nonce"]

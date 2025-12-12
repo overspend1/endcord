@@ -1,8 +1,10 @@
+import curses
 import importlib.util
 import logging
 import os
 import re
 import shutil
+import signal
 import subprocess
 import sys
 import threading
@@ -280,11 +282,30 @@ class Endcord:
         self.log_queue_manager = None
         # threading.Thread(target=self.profiling_auto_exit, daemon=True).start()
         self.discord.get_voice_regions()
+
+        # init sigint handler - replaces handler from main.py
+        signal.signal(signal.SIGINT, self.sigint_handler)
+
+        # init extensions
         if config["extensions"] and ENABLE_EXTENSIONS:
             self.load_extensions(version)
             self.tui.load_extensions(self.extensions)
             self.gateway.load_extensions(self.extensions)
         self.main()
+
+
+    def sigint_handler(self, _signum, _frame):
+        """Handling Ctrl-C event"""
+        self.gateway.disconnect_ws()
+        self.run = False
+        try:
+            # in case curses.wrapper doesnt restore terminal
+            curses.nocbreak()
+            curses.echo()
+            curses.endwin()
+        except curses.error:
+            pass
+        sys.exit(0)
 
 
     def load_extensions(self, version):
@@ -3316,6 +3337,7 @@ class Endcord:
                 self.update_extra_line("Invalid emoji. Should be: <:EmojiName:emoji_id>")
 
         elif cmd_type == 58:   # QUIT
+            self.gateway.disconnect_ws()
             self.run = False
 
         elif cmd_type == 59:   # MARK_AS_UNREAD
