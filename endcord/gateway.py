@@ -1291,7 +1291,6 @@ class Gateway():
                     self.proto_changed = True
 
                 elif optext == "USER_GUILD_SETTINGS_UPDATE":
-
                     if data["guild_id"]:   # guild and channel
                         for guild_num_search, guild_g in enumerate(self.guilds):
                             if guild_g["guild_id"] == data["guild_id"]:
@@ -1316,7 +1315,8 @@ class Gateway():
                         # reset all to defaults
                         for channel_num, channel in enumerate(self.guilds[guild_num]["channels"]):
                             if channel["type"] in (0, 2, 4, 5, 15):
-                                hidden = True   # hidden by default
+                                flags = int(channel.get("flags", 0))
+                                hidden = not perms.decode_flag(flags, 12)   # manually hidden
                             else:
                                 hidden = False
                             self.guilds[guild_num]["channels"][channel_num]["hidden"] = hidden
