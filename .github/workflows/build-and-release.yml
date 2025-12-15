@@ -26,7 +26,7 @@ jobs:
       - name: Compare versions
         id: check
         run: |
-          CUR="${GITHUB_REF_NAME}"
+          CUR="${{ github.ref_name }}"
           PREV="${{ steps.prev.outputs.prev }}"
 
           # Extract MINOR numbers
