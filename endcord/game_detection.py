@@ -72,7 +72,7 @@ def get_user_processes_diff_linux():
             continue
 
         # skip libraries and bash
-        if cmdline.startswith("/usr/lib") or cmdline.startswith("/bash"):
+        if cmdline.startswith("/usr/lib") or cmdline.startswith("bash"):
             continue
 
         # if path doesnt have / or \ its definitely not a game
