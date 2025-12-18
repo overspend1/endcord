@@ -1079,7 +1079,7 @@ class Endcord:
 
         # update slowmode
         slowmode = self.current_channel.get("rate_limit")
-        if slowmode and not this_guild.get("admin", False):
+        if slowmode and not this_guild.get("admin", False) and not self.current_channel.get("bypass_slowmode"):
             self.slowmodes[channel_id] = slowmode
             if self.slowmode_times.get(channel_id) is None:
                 self.slowmode_times[channel_id] = 0

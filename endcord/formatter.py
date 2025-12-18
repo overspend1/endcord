@@ -2569,10 +2569,10 @@ def generate_tree(dms, guilds, threads, unseen, mentioned, guild_folders, activi
         if in_folder:
             for num, folder in enumerate(tree_metadata):
                 if folder and folder["id"] == in_folder:
-                    if ping_guild and not muted_guild:
-                        tree_format[num] += 20
+                    if ping_guild and not muted_guild and (not tree_format[num] or tree_format[num] == 30):
+                        tree_format[num] = 20
                     elif unseen_guild and not muted_guild:
-                        tree_format[num] += 30
+                        tree_format[num] = 30
                     break
 
         # add categories to the tree
