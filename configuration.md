@@ -121,6 +121,8 @@ Note: always put string in `""`. To use `"` inside the string escape it like thi
     Maximum number of commands stored in history. File is `command_history.json` in config dir.
 - `external_editor = None`  
     Command or path to executable for launching external editor. Set to `None` to use system default.
+- `calls = True`  
+    If disabled, wont be able to receive nor start calls and calls wont ring.
 - `linux_notification_sound = "message"`  
     Sound played when notification is displayed. Linux only. Set to None to disable. Sound names can be found in `/usr/share/sounds/freedesktop/stereo`, without extension.
 - `custom_notification_sound = None`  

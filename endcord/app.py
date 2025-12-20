@@ -130,6 +130,7 @@ class Endcord:
         self.remove_prev_notif = ["remove_previous_notification"]
         self.emoji_as_text = config["emoji_as_text"]
         self.show_pending_messages = config["show_pending_messages"]
+        self.enable_calls = config["calls"]
 
         if not self.external_editor or not shutil.which(self.external_editor):
             self.external_editor = os.environ.get("EDITOR", "nano")
@@ -3262,7 +3263,7 @@ class Endcord:
             self.show_blocked_messages = not self.show_blocked_messages
             self.update_chat()
 
-        elif cmd_type == 48:   # VOICE_START_CALL
+        elif cmd_type == 48 and self.enable_calls:   # VOICE_START_CALL
             if not self.in_call:
                 if not self.active_channel["guild_id"]:
                     threading.Thread(target=self.start_call, daemon=True, args=(False, None, self.active_channel["channel_id"])).start()
@@ -6185,6 +6186,8 @@ class Endcord:
 
     def process_call_gateway_events(self, event):
         """Process call related event from gateway"""
+        if not self.enable_calls:
+            return
         for dm in self.dms:
             if dm["id"] == event["channel_id"]:
                 break
@@ -6196,7 +6199,7 @@ class Endcord:
         if self.in_call and event["channel_id"] != self.in_call["channel_id"] and event["op"] != "CALL_DELETE":
             return
 
-        event = self.execute_extensions_methods("on_call_gateway_event", event, cache=True)
+        event = self.execute_extensions_methods("on_call_gateway_event", event, cache=True)[0]
 
         if event["op"] == "CALL_CREATE" and not (self.in_call or self.joining_call):
             if dm["id"] not in self.incoming_calls:
@@ -6267,7 +6270,7 @@ class Endcord:
 
     def process_call_voice_gateway_events(self, event):
         """Process events from voice gateway"""
-        event = self.execute_extensions_methods("on_call_voice_gateway_event", event, cache=True)
+        event = self.execute_extensions_methods("on_call_voice_gateway_event", event, cache=True)[0]
 
         if event["op"] == "USER_SPEAK":
             for num, participant in enumerate(self.call_participants):
@@ -6849,7 +6852,7 @@ class Endcord:
             while self.run:
                 new_message = self.gateway.get_messages()
                 if new_message:
-                    new_message, = self.execute_extensions_methods("on_message_event", new_message, cache=True)
+                    new_message = self.execute_extensions_methods("on_message_event", new_message, cache=True)[0]
                     new_message_channel_id = new_message["d"]["channel_id"]
                     this_channel = (new_message_channel_id == self.active_channel["channel_id"])
                     if this_channel:

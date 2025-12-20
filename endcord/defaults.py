@@ -57,6 +57,7 @@ settings = {
     "linux_ringtone_outgoing": "phone-outgoing-calling",
     "custom_ringtone_outgoing": None,
     "external_editor": None,
+    "calls": True,
     "yt_dlp_path": "yt-dlp",
     "yt_dlp_format": 18,
     "mpv_path": "mpv",
