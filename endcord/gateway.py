@@ -349,7 +349,7 @@ class Gateway():
                                         break
 
 
-    def process_one_channel_overrides(self, channel_overrides, guild_num, server_message_notifications):
+    def process_one_channel_overrides(self, channel_overrides, guild_num, guild_message_notifications):
         """Process channel_overrides for one guild"""
 
         # first pass to get values and process message_notifications for categories
@@ -374,7 +374,7 @@ class Gateway():
         # second pass to process message_notifications for categories
         for channel in self.guilds[guild_num]["channels"]:
             if channel["type"] == 4 and ("message_notifications" not in channel or channel["message_notifications"] == 3):    # category with server defaults notifications
-                channel["message_notifications"] = 10 + server_message_notifications
+                channel["message_notifications"] = 10 + guild_message_notifications
 
         # third pass to process message_notifications for channels
         for channel in self.guilds[guild_num]["channels"]:
@@ -383,8 +383,12 @@ class Gateway():
                 for category in self.guilds[guild_num]["channels"]:
                     if category["id"] == category_id:
                         category_message_notifications = category["message_notifications"]
+                        if category_message_notifications >= 10:
+                            category_message_notifications -= 10
+                        break
                 else:
-                    category_message_notifications = 2   # nothing
+                    category_message_notifications = guild_message_notifications
+                    logger.info(f"NOT FOUND {channel["id"]}, PARENT {category_id}")
                 channel["message_notifications"] = 10 + category_message_notifications
 
 
@@ -1347,6 +1351,7 @@ class Gateway():
                                 hidden = False
                             self.guilds[guild_num]["channels"][channel_num]["hidden"] = hidden
                             self.guilds[guild_num]["channels"][channel_num]["muted"] = False
+                            self.guilds[guild_num]["channels"][channel_num]["message_notifications"] = 3
                         self.process_one_channel_overrides(data["channel_overrides"], guild_num, data["message_notifications"])
                         self.process_hidden_channels()
                     else:   # dm

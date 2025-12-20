@@ -6026,21 +6026,34 @@ class Endcord:
             elif data["user_id"] not in self.blocked:
                 # skip muted channels
                 muted = False
+                message_notifications = 2   # 0 - all messages, 1 - only mentions, 2 - nothing
                 for guild in self.guilds:
                     if guild["guild_id"] == data["guild_id"]:
-                        if guild.get("muted"):
-                            muted = True
-                            break
+                        muted = guild.get("muted")
+                        suppress_everyone = guild["suppress_everyone"]
+                        suppress_roles = guild["suppress_roles"]
                         for channel in guild["channels"]:
-                            if new_message_channel_id == channel["id"] and (channel.get("muted") or channel.get("hidden")):
-                                muted = True
+                            if new_message_channel_id == channel["id"]:
+                                if channel.get("muted") or channel.get("hidden"):
+                                    muted = True
+                                else:
+                                    message_notifications = channel.get("message_notifications")
+                                    if message_notifications >= 10:
+                                        message_notifications -= 10
                                 break
                         break
+                else:
+                    suppress_everyone = False
+                    suppress_roles = False
                 for dm in self.dms:
                     if dm["id"] == new_message_channel_id:
+                        is_dm = True
                         muted = dm.get("muted")
+                        message_notifications = 0
                         break
-                if not muted:
+                else:
+                    is_dm = False
+                if not muted and message_notifications != 2:
                     # check if this message should ping
                     ping = False
                     mentions = data["mentions"]
@@ -6050,10 +6063,11 @@ class Endcord:
                         if guild["guild_id"] == data["guild_id"]:
                             my_roles = guild["roles"]
                     if (
-                        data["mention_everyone"] or
-                        bool([i for i in my_roles if i in data["mention_roles"]]) or
-                        self.my_id in [x["id"] for x in mentions] or
-                        new_message_channel_id in self.dms_vis_id
+                        message_notifications == 0 or
+                        (data["mention_everyone"] and not suppress_everyone) or
+                        (bool([i for i in my_roles if i in data["mention_roles"]]) and not suppress_roles) or
+                        (self.my_id in [x["id"] for x in mentions]) or
+                        (is_dm and new_message_channel_id in self.dms_vis_id)
                     ):
                         if not this_channel or self.new_unreads:   # new_unreads already set in process events for active channel
                             ping = True

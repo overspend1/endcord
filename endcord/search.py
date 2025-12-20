@@ -335,9 +335,9 @@ def search_set_notifications(guilds, dms, guild_id, channel_id, ping_options, qu
                         break
                 else:
                     default_val = 2
-            default = "default" + f"({"server" if channel["type"] == 4 else "category"}: {ping_options[default_val]})"
-            message_notifications = 3 if message_notifications > 10 else message_notifications
-            for num, option in enumerate(ping_options + [default]):
+            default = "default" + f" ({"server" if channel["type"] == 4 else "category"}: {ping_options[default_val]})"
+            message_notifications = 3 if message_notifications >= 10 else message_notifications
+            for num, option in enumerate(ping_options[:-1] + [default]):
                 if num == message_notifications:
                     options.append((f"* {option}", query_words[0] + " " + option.split(" ")[0]))
                 else:
@@ -346,6 +346,7 @@ def search_set_notifications(guilds, dms, guild_id, channel_id, ping_options, qu
         for dm in dms:
             if dm["id"] == channel_id:
                 options.append(("No notification settings for DM", None))
+                return options
         else:   # guild
             guild = None
             for guild in guilds:

@@ -8,7 +8,7 @@ DISCORD_EPOCH_MS = 1420070400000
 STATUS_STRINGS = ("online", "idle", "dnd", "invisible")
 TIME_FORMATS = ("%Y-%m-%d", "%Y-%m-%d-%H-%M", "%H:%M:%S", "%H:%M")
 TIME_UNITS = {"s": 1, "m": 60, "h": 3600, "d": 86400, "w": 604800}
-NOTIFICATION_VALUES = ("all", "mentions", "nothing", "suppress_everyone", "suppress_roles")
+NOTIFICATION_VALUES = ("all", "mentions", "nothing", "default", "suppress_everyone", "suppress_roles")
 
 match_from = re.compile(r"from:<@\d*>")
 match_mentions = re.compile(r"mentions:<@\d*>")

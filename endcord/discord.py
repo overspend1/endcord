@@ -29,7 +29,7 @@ DISCORD_CDN_HOST = "cdn.discordapp.com"
 DISCORD_EPOCH = 1420070400
 SEARCH_PARAMS = ("content", "channel_id", "author_id", "mentions", "has", "max_id", "min_id", "pinned", "offset")
 SEARCH_HAS_OPTS = ("link", "embed", "poll", "file", "video", "image", "sound", "sticker", "forward")
-PING_OPTIONS = ["all", "mentions", "nothing"]   # must be list
+PING_OPTIONS = ["all", "mentions", "nothing", "default"]   # must be list
 SUPPRESS_OPTIONS = ("suppress_everyone", "suppress_roles")
 logger = logging.getLogger(__name__)
 
@@ -1057,7 +1057,7 @@ class Discord():
         """Send notification settings for guild"""
         guild_id = str(guild_id)
         option = None
-        for i, ping_option in enumerate(PING_OPTIONS):
+        for i, ping_option in enumerate(PING_OPTIONS[:-1]):
             if setting == ping_option:
                 option = "message_notifications"
                 value = i
