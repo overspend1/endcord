@@ -495,7 +495,7 @@ class TUI():
             self.draw_title_tree()
         self.draw_extra_line(self.extra_line_text)
         self.draw_extra_window(self.extra_window_title, self.extra_window_body, self.extra_select)
-        self.draw_member_list(self.member_list, self.member_list_format, force=True)
+        self.draw_member_list(self.member_list, self.member_list_format, force=True, clean=not(redraw_only))
 
 
     def resize_bordered(self, redraw_only=False):
@@ -568,7 +568,7 @@ class TUI():
             y, x = extra_window_hwyx[2], extra_window_hwyx[3]
             self.screen.addstr(y, x - 1, self.corner_ul, curses.color_pair(self.default_color))
             self.screen.addstr(y, x + extra_window_hwyx[1], self.corner_ur, curses.color_pair(self.default_color))
-        self.draw_member_list(self.member_list, self.member_list_format, force=True)
+        self.draw_member_list(self.member_list, self.member_list_format, force=True, clean=not(redraw_only))
         self.screen.noutrefresh()
         self.need_update.set()
 
@@ -1543,7 +1543,7 @@ class TUI():
                 self.draw_chat()
 
 
-    def draw_member_list(self, member_list, member_list_format, force=False, reset=False):
+    def draw_member_list(self, member_list, member_list_format, force=False, reset=False, clean=True):
         """Draw member list and resize chat"""
         with self.lock:
             self.member_list = member_list
@@ -1557,7 +1557,8 @@ class TUI():
                     if not force and self.win_member_list:
                         self.mlist_selected = -1
                         self.mlist_index = 0
-                    self.clear_chat_wide()
+                    if clean:
+                        self.clear_chat_wide()
                     common_h = self.init_chat()
                     # chat will be regenerated and resized in app main loop
 

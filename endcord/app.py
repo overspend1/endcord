@@ -2048,7 +2048,7 @@ class Endcord:
                             # remove popup if not in this channel
                             if self.active_channel["channel_id"] not in self.incoming_calls:
                                 self.update_extra_line(permanent=True)
-                elif self.fun == 4 and self.extra_line and "adoptout" in self.extra_line:
+                elif self.fun == 4 and self.extra_line and self.extra_line.startswith("Personalized"):
                     self.download_threads.append(threading.Thread(target=self.download_file, daemon=True, args=(
                         "https://" + "archive.org/download/youtube-" + "/".join(["xvFZjo5PgG0"]*2) + ".mp4",
                         False, True,
