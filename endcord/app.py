@@ -3688,7 +3688,6 @@ class Endcord:
     def get_msg_embeds(self, msg_index, media_only=True, stickers=True):
         """Get all palyable media embeds and stickers from message in chat"""
         urls = []
-        logger.info(self.messages[msg_index]["embeds"])
         for embed in self.messages[msg_index]["embeds"]:
             media_type = embed["type"].split("/")[0]
             if embed["url"] and (not media_only or media_type in MEDIA_EMBEDS):
@@ -3706,7 +3705,6 @@ class Endcord:
                 sticker_url = discord.get_sticker_url(sticker)
                 if sticker_url:
                     urls.append(sticker_url)
-        logger.info(urls)
         return urls
 
 
