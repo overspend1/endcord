@@ -1513,10 +1513,11 @@ class Endcord:
                 msg_index = self.lines_to_msg(chat_sel)
                 peripherals.copy_to_clipboard(self.messages[msg_index]["content"])
 
-            # upload attachment
+            # upload file
             elif action == 13 and self.messages and not self.disable_sending:
                 if self.config["native_file_dialog"]:
                     self.upload_native_dialog()
+                    self.restore_input_text = (input_text, "standard")
                     continue
                 self.restore_input_text = (None, "autocomplete")
                 self.add_to_store(self.active_channel["channel_id"], input_text)
