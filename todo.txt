@@ -1,6 +1,3 @@
-Fix text disappears after native file dialog
-Optimize accessing guilds and channels by making them dicts
-
 Voice channels
     add voice channels to tree
     show voice channel activity

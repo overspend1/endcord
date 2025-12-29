@@ -1617,7 +1617,7 @@ class Gateway():
                                 # update default role
                                 if role["id"] == guild_id:
                                     for num_g, guild in enumerate(self.guilds):
-                                        if guild["guild_id"] == num_guild:
+                                        if guild["guild_id"] == guild_id:
                                             self.guilds[num_g]["permissions"] = role["permissions"]
                                             break
                                 if not self.user_update:
