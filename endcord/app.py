@@ -2347,6 +2347,8 @@ class Endcord:
                     text_to_send = emoji.emojize(input_text, language="alias", variant="emoji_type")
                     if self.fun and ("xyzzy" in text_to_send or "XYZZY" in text_to_send):
                         self.update_extra_line("Nothing happens.")
+                    if not text_to_send.strip():
+                        continue
                     nonce = discord.generate_nonce()
                     self.put_to_message_sender(self.discord.send_message,
                         self.active_channel["channel_id"],
