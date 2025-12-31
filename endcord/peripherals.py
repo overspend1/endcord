@@ -558,12 +558,20 @@ def copy_to_clipboard(text):
         proc.communicate(input=text.encode("utf-8"))
 
 
-def native_select_files(file_filter=None, multiple=True):
+def native_select_files(file_filter=None, multiple=True, auto=False):
     """Get one or more file paths with native dialog"""
     if filedialog == "windows":
         init_dir = os.path.join(os.environ["USERPROFILE"], "Desktop")
     else:
         init_dir = os.path.expanduser("~") + "/"
+
+    if sys.platform == "linux" and auto:
+        cmd = ["yazi", "--chooser-file=/dev/stdout", "~"]
+        data = subprocess.run(cmd, capture_output=True, text=True, check=False)
+        paths = []
+        if data.returncode == 0 and data.stdout.strip():
+            paths = [line.strip() for line in data.stdout.strip().split("\n") if line.strip()]
+        return paths
 
     if filedialog == "zenity":
         command = [

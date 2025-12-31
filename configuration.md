@@ -94,7 +94,7 @@ Note: always put string in `""`. To use `"` inside the string escape it like thi
     More info [here](http://aspell.net/man-html/Notes-on-the-Different-Suggestion-Modes.html#Notes-on-the-Different-Suggestion-Modes).  
 - `aspell_lang = "en_US"`  
     Language dictionary for aspell.  
-    To list all installed languages, run `aspell dump dicts`.
+    To list all installed languages, run `aspell dump dicts`.  
     Additional dictionaries can be installed with package manager or downloaded [here](https://ftp.gnu.org/gnu/aspell/dict/0index.html) (extract archive and run "configure" script).  
 - `media_mute = False`  
     Whether to mute video in media player or not. If true, will not initialize audio at all.
@@ -106,8 +106,9 @@ Note: always put string in `""`. To use `"` inside the string escape it like thi
     Will convert emoji characters to their names. Enable if emoji are not supported by terminal.
 - `native_media_player = False`  
     Use system native media player instead in-terminal ASCII art.
-- `native_file_dialog = False`  
-    Use system native file dialog when uploading files.
+- `native_file_dialog = "Auto"`  
+    Use system native file dialog when uploading files.  
+    Available options: `True` - use system native file picker, `False` - use internal file picker, `"Auto"` - use yazi if available, fallback to system native.
 - `save_sumamries = True`  
     Whether to save summaries to disk. Disable to save RAM and reduce disk writes.
 - `default_stickers = True`  

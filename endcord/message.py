@@ -590,7 +590,10 @@ def prepare_special_message_types(message):
             elif field["name"] == "victor_answer_votes":
                 data["victor_answer_votes"] = field["value"]
         if "victor_answer_votes" in data and "total_votes" in data:
-            value = round((int(data["victor_answer_votes"]) / int(data["total_votes"])) * 100)
+            if int(data["total_votes"]):
+                value = round((int(data["victor_answer_votes"]) / int(data["total_votes"])) * 100)
+            else:
+                value = 0
             percent = f", {value}%"
         else:
             percent = ", 0%"

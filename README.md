@@ -402,7 +402,7 @@ To prevent extension injection (malware can modify endcord config and inject ext
 Optional dependencies:
 - `xclip` - Clipboard support on X11
 - `wl-clipboard` - Clipboard support on Wayland
-- `zenity` / `kdialog` - Native file dialog when uploading
+- `yazi` / `zenity` / `kdialog` - File dialog when uploading
 - `aspell` - Spellchecking (and `aspell-en` dictionary)
 - `yt-dlp` - youtube support
 - `mpv` - Play youtube videos in native player (non-ascii)

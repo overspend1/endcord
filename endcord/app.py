@@ -3836,7 +3836,12 @@ class Endcord:
 
     def upload_native_dialog(self):
         """Thread that waits for native dialog to return list of files to upload"""
-        files = peripherals.native_select_files()
+        if self.config["native_file_dialog"] == "Auto" and shutil.which("yazi"):
+            self.tui.pause_curses()
+            files = peripherals.native_select_files(auto=True)
+            self.tui.resume_curses()
+        else:
+            files = peripherals.native_select_files()
         for file in files:
             self.upload_threads.append(threading.Thread(target=self.upload, daemon=True, args=(file, )))
             self.upload_threads[-1].start()
