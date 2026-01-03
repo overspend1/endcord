@@ -139,6 +139,16 @@ class Discord():
         return None
 
 
+    def get_file_id(self, url):
+        """Get file id from attachment url"""
+        parsed_url = urllib.parse.urlsplit(url)
+        if self.cdn_host in parsed_url.netloc or (self.cdn_host == DISCORD_CDN_HOST and DYN_DISCORD_CDN_HOST in parsed_url.netloc):
+            path_parts = parsed_url.path.strip("/").split("/")
+            if len(path_parts) >= 3:
+                return path_parts[2]
+        return None
+
+
     def get_connection(self, host, port):
         """Get connection object and handle proxying"""
         if self.proxy.scheme:

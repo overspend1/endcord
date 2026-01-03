@@ -3889,7 +3889,8 @@ class Endcord:
             self.add_running_task("Downloading file", 2)
             self.update_extra_line("File download started.")
             try:
-                path = self.downloader.download(url)
+                file_id = self.discord.get_file_id(url)
+                path, filename = self.downloader.download(url, file_id)
                 if path:
                     if open_move:
                         if peripherals.get_can_play(path):
@@ -3899,7 +3900,7 @@ class Endcord:
                     if move:
                         if not os.path.exists(self.downloads_path):
                             os.makedirs(os.path.dirname(self.downloads_path), exist_ok=True)
-                        destination = os.path.join(self.downloads_path, os.path.basename(path))
+                        destination = os.path.join(self.downloads_path, filename)
                         shutil.move(path, destination)
                     else:
                         destination = path

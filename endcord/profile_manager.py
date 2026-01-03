@@ -65,6 +65,7 @@ def setup_secret_service():
         if "DBUS_SESSION_BUS_ADDRESS" not in os.environ:
             if not shutil.which("dbus-launch"):
                 logger.warning("Cant use keyring: 'dbus' package is not installed")
+                return False
             output = subprocess.check_output(["dbus-launch"]).decode()
             for line in output.strip().splitlines():
                 if "=" in line:
@@ -81,9 +82,13 @@ def setup_secret_service():
         )
         if "not activatable" in result.stderr.decode():
             logger.warning("Cant use keyring: failed to start 'gnome-keyring' daemon, it is probably not installed")
+            return False
 
     except subprocess.CalledProcessError:
         logger.warning("Cant use keyring: failed to start gnome-keyring")
+        return False
+
+    return True
 
 
 def load_secret():
@@ -636,7 +641,7 @@ def manage(profiles_path, external_selected, force_open=False):
 
     # if no profiles and have working keyring
     if sys.platform == "linux" and not (bool(profiles_enc) or bool(profiles_plain)) and have_keyring:
-        setup_secret_service()
+        have_keyring = setup_secret_service()
 
     try:
         data = curses.wrapper(main_tui, profiles_enc, profiles_plain, selected, have_keyring)
