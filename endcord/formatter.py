@@ -1495,10 +1495,10 @@ def generate_status_line(my_user_data, my_status, unseen, typing, active_channel
             format_rich
             .replace("%type", verb)
             .replace("%name", my_status["activities"][0]["name"])
-            .replace("%state", state if state else "")
-            .replace("%details", details if details else "")
-            .replace("%small_text", sm_txt if sm_txt else "")
-            .replace("%large_text", lg_txt if lg_txt else "")
+            .replace("%state", state or "")
+            .replace("%details", details or "")
+            .replace("%small_text", sm_txt or "")
+            .replace("%large_text", lg_txt or "")
         )
         if fun:
             rich = rich.replace("Metal", "🤘 Metal").replace("metal", "🤘 metal")
@@ -1585,7 +1585,7 @@ def generate_status_line(my_user_data, my_status, unseen, typing, active_channel
         .replace("%unreads", "[New unreads]" if unseen else "")
         .replace("%typing", typing_string)
         .replace("%rich", rich)
-        .replace("%server", guild if guild else "DM")
+        .replace("%server", guild or "DM")
         .replace("%channel", str(active_channel["channel_name"]))
         .replace("%action", action_string)
         .replace("%task", task)

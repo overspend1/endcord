@@ -81,6 +81,26 @@ def time_string_seconds(time_str):
     return total
 
 
+def read_value(text, idx):
+    """Read quited and unquoted value from string index"""
+    length = len(text)
+    # quoted value
+    if idx < length and text[idx] == '"':
+        idx += 1
+        start = idx
+        while idx < length and text[idx] != '"':
+            idx += 1
+        value = text[start:idx]
+        return value, idx + 1
+
+    # unquoted value
+    start = idx
+    while idx < length and text[idx] != " ":
+        idx += 1
+    return text[start:idx], idx
+
+
+
 def search_string(text):
     """
     Parse search string.
@@ -772,6 +792,51 @@ def command_string(text):
     elif text_lower.split(" ")[0] == "open_config_dir":
         cmd_type = 62
 
+    # 63 - SEND_MESSAGE
+    elif text_lower.split(" ")[0] == "send_message":
+        cmd_type = 63
+        channel_id = None
+        reply_id = None
+        ping = True
+        attachments = []
+        length = len(text_lower)
+        i = 13
+        while i < length and text[i] == " ":   # skip spaces
+            i += 1
+        while i < length:
+            if text.startswith("--channel_id=", i):
+                i += len("--channel_id=")
+                value, i = read_value(text, i)
+                try:
+                    int(value)
+                    channel_id = value
+                except ValueError:
+                    match = re.search(match_channel, value)
+                    if match:
+                        channel_id = match.group(1)
+            elif text.startswith("--reply_id=", i):
+                i += len("--reply_id=")
+                reply_id, i = read_value(text, i)
+            elif text.startswith("--ping=", i):
+                i += len("--ping=")
+                value, i = read_value(text, i)
+                ping = value.lower() == "true"
+            elif text.startswith("--attachment=", i):
+                i += len("--attachment=")
+                value, i = read_value(text, i)
+                attachments.append(value)
+            else:
+                break
+            while i < length and text[i] == " ":   # skip spaces
+                i += 1
+        content = text[i:].lstrip()
+        cmd_args = {
+            "content": content,
+            "channel_id": channel_id,
+            "reply_id": reply_id,
+            "ping": ping,
+            "attachments": attachments,
+        }
 
     # 66 - 666
     elif text_lower == "666":

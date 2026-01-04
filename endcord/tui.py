@@ -2253,10 +2253,6 @@ class TUI():
                     self.input_select_start = None
                     return self.return_input_code(0)
 
-            code = self.common_keybindings(key, command=command, forum=forum)
-            if code:
-                return self.return_input_code(code)
-
             if isinstance(key, str):
                 if len(key) > 1 and key.startswith("ALT+"):
                     try:
@@ -2278,7 +2274,7 @@ class TUI():
                         selected_completion = 0
                     self.add_to_delta_store(key)
                     self.show_cursor()
-                    if self.assist:
+                    if self.assist and not self.bracket_paste:
                         if key in ASSIST_TRIGGERS:
                             self.assist_start = self.input_index
 
@@ -2296,10 +2292,14 @@ class TUI():
                     selected_completion = 0
                 self.add_to_delta_store(chr(key))
                 self.show_cursor()
-                if self.assist:
+                if self.assist and not self.bracket_paste:
                     if chr(key) in ASSIST_TRIGGERS:
                         self.assist_start = self.input_index
-                self.spellcheck()
+                if not self.bracket_paste:
+                    self.spellcheck()
+
+            elif (code := self.common_keybindings(key, command=command, forum=forum)):
+                return self.return_input_code(code)
 
             elif key == BACKSPACE:
                 if self.input_select_start is not None:

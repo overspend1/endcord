@@ -69,6 +69,7 @@ settings = {
     "send_x_super_properties": True,
     "proxy": None,
     "custom_host": None,
+    "capabilities": None,
     "easter_eggs": True,
     "debug": False,
 }

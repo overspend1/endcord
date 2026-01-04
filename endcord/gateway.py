@@ -70,7 +70,7 @@ def double_get(data, key1, key2, default=None):
 class Gateway():
     """Methods for fetching and sending data to Discord gateway through websocket"""
 
-    def __init__(self, token, host, client_prop, user_agent, proxy=None):
+    def __init__(self, token, host, client_prop, user_agent, proxy=None, capablities=None):
         if host:
             host_obj = urllib.parse.urlsplit(host)
             if host_obj.netloc:
@@ -79,11 +79,19 @@ class Gateway():
                 self.host = host_obj.path
         else:
             self.host = DISCORD_HOST
+
         self.header = [
             "Connection: keep-alive, Upgrade",
             "Sec-WebSocket-Extensions: permessage-deflate",
             f"User-Agent: {user_agent}",
         ]
+        self.capabilities = None
+        if capablities is not None:
+            try:
+                self.capabilities = int(capablities)
+            except ValueError:
+                pass
+
         self.extensions = []
         self.client_prop = client_prop
         self.init_time = time.time() * 1000
@@ -319,7 +327,7 @@ class Gateway():
         if len(self.member_roles[num]) > LOCAL_MEMBER_COUNT:
             self.member_roles[num].pop(-1)
         if not self.roles_changed:
-            self.roles_changed = nonce if nonce else True
+            self.roles_changed = nonce or True
 
 
     def process_hidden_channels(self):
@@ -773,7 +781,7 @@ class Gateway():
                             continue
                         unseen_channel = {
                             "last_message_id": last_message_id,
-                            "last_acked_message_id": last_acked if last_acked else 0,   # dont allow it to be None
+                            "last_acked_message_id": last_acked or 0,   # dont allow it to be None
                             "mentions": ["True"] if channel_id in msg_ping else [],   # message_id is unknown
                         }
                         if not last_message_id or int(unseen_channel["last_acked_message_id"]) < int(last_message_id):
@@ -1716,7 +1724,7 @@ class Gateway():
             "op": 2,
             "d": {
                 "token": self.token,
-                "capabilities": DEFAULT_CAPABILITIES,
+                "capabilities": self.capabilities or DEFAULT_CAPABILITIES,
                 "properties": self.client_prop,
                 "presence": {
                     "activities": [],
@@ -1728,7 +1736,7 @@ class Gateway():
         }
         if self.token.startswith("Bot"):
             payload["d"].pop("capabilities")
-            payload["d"]["intents"] = DEFAULT_INTENTS
+            payload["d"]["intents"] = self.capabilities or DEFAULT_INTENTS
         self.send(payload)
 
 

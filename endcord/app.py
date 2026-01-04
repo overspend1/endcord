@@ -205,8 +205,8 @@ class Endcord:
         logger.debug(f"User-Agent: {self.user_agent}")
 
         self.chat = []
-        self.chat.insert(0, f"Connecting to {self.config["custom_host"] if self.config["custom_host"] else "Discord"}")
-        logger.info(f"Connecting to {self.config["custom_host"] if self.config["custom_host"] else "Discord"}")
+        self.chat.insert(0, f"Connecting to {self.config["custom_host"] or "Discord"}")
+        logger.info(f"Connecting to {self.config["custom_host"] or "Discord"}")
 
         if not config["send_x_super_properties"]:
             client_prop = None
@@ -229,6 +229,7 @@ class Endcord:
             client_prop_gateway,
             self.user_agent,
             proxy=config["proxy"],
+            capablities=config["capabilities"],
         )
         # this takes some time, so let other things init in parallel
         threading.Thread(target=self.gateway.connect, daemon=True).start()
@@ -3419,6 +3420,15 @@ class Endcord:
         elif cmd_type == 62:   # OPEN_CINFIG_DIR
             peripherals.native_open(os.path.expanduser(peripherals.config_path))
 
+        elif cmd_type == 63:   # SEND_MESSAGE
+            threading.Thread(target=self.send_message_command, daemon=True, args=(
+                cmd_args["content"],
+                cmd_args["channel_id"],
+                cmd_args["reply_id"],
+                cmd_args["ping"],
+                cmd_args["attachments"],
+            )).start()
+
         elif cmd_type == 66 and self.fun:   # 666
             self.fun = 1 if self.fun == 2 else 2
             self.tui.set_fun(self.fun)
@@ -3488,6 +3498,36 @@ class Endcord:
         else:
             self.update_extra_line("Invalid app command.")
         self.stop_assist()
+
+
+    def send_message_command(self, content, channel_id, reply_id, ping, attachments_paths):
+        """Execute send_message command as a thread"""
+        if not channel_id:
+            channel_id = self.active_channel["channel_id"]
+        reply_guild_id = None
+        if reply_id:
+            reply_guild_id = self.find_parents_from_id(channel_id)[2]
+            if not reply_guild_id:
+                reply_id = None
+        for attachment in attachments_paths:
+            self.upload(attachment, channel_id=channel_id)
+        this_attachments = []
+        for num, attachments in enumerate(self.ready_attachments):
+            if attachments["channel_id"] == channel_id:
+                this_attachments = self.ready_attachments.pop(num)["attachments"]
+                self.update_extra_line()
+                break
+        self.discord.send_message(
+            channel_id,
+            content,
+            reply_id=reply_id,
+            reply_channel_id=channel_id,
+            reply_guild_id=reply_guild_id,
+            reply_ping=ping,
+            attachments=this_attachments,
+            nonce=None,
+        )
+        self.update_extra_line("Message sent.")
 
 
     def refresh_attachment_url(self, url):
@@ -3921,7 +3961,7 @@ class Endcord:
                 self.cached_downloads.append([orig_url, destination])
 
 
-    def upload(self, path):
+    def upload(self, path, channel_id=None):
         """Thread that uploads file to currently open channel"""
         path = os.path.expanduser(path)
         if not os.path.exists(path):
@@ -3946,7 +3986,7 @@ class Endcord:
                 break
         else:
             self.ready_attachments.append({
-                "channel_id": self.active_channel["channel_id"],
+                "channel_id": channel_id or self.active_channel["channel_id"],
                 "attachments": [],
             })
             ch_index = len(self.ready_attachments) - 1
@@ -6347,7 +6387,7 @@ class Endcord:
                     if dm["id"] == self.in_call["channel_id"]:
                         for recipient in dm["recipients"]:
                             if recipient["id"] == event["user_id"]:
-                                name = recipient["global_name"] if recipient["global_name"] else recipient["username"]
+                                name = recipient["global_name"] or recipient["username"]
                                 self.update_extra_line(f"{name} joined the call")
                                 # add call participant
                                 for num, participant in enumerate(self.call_participants):
@@ -6761,7 +6801,7 @@ class Endcord:
 
         self.gateway_state = 1
         logger.info("Gateway is ready")
-        self.chat.insert(0, f"Connecting to {self.config["custom_host"] if self.config["custom_host"] else "Discord"}")
+        self.chat.insert(0, f"Connecting to {self.config["custom_host"] or "Discord"}")
         self.chat.insert(0, "Loading channels")
         self.tui.update_chat(self.chat, [[[self.colors[0]]]] * len(self.chat))
 

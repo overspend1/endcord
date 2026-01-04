@@ -120,6 +120,13 @@
     `duration` can be: `4w3d5h30m10s` where `w`is weeks, `d` is days..., can be used partially and mixed: `5h1w`. Default is 7 days and infinite uses.
 - `rename_folder [name]`  
     Locally rename currently selected folder in tree. Custom names are kept in state_profile_name.json in config dir.
+- `send_message --channel_id=[channel_id]/<#[channel_id]> --reply_id=[message_id] --ping=[True/False] --attachment=[path] [message_content]`  
+    Try not to abuse this command, as its run in a thread and can abuse API!  
+    `--channel_id` - accepts both channel_id and formatted channel_id from assist, only last channel_id will be used. Default: current channel.  
+    `--reply_id` - mesage id of message that is being replied to.  
+    `--ping` - If this messahe is a reply, should it ping. Default=`True`.  
+    `--attachment` - Absolute path to file to be uploaded as an attachment, can be multiple.  
+    Everything after these flags is considered as message content.  
 - `redraw`  
     Redraw UI if it ever gets messed up.
 - `open_config_dir`  
