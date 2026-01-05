@@ -2039,39 +2039,28 @@ class Discord():
         return self.ranked_voice_regions
 
 
-    def check_detectable_apps_version(self):
-        """Get last-modified value for list of detectable applications"""
-        # TOKEN IS NOT USED
+    def get_detectable_apps(self, save_dir, etag=None):
+        """
+        Get and save list (as ndjson) of detectable applications, containing all detectable games.
+        Use etag to skip downloading same cached resource.
+        """
         message_data = None
         url = "/api/v9/applications/detectable"
+        if etag:
+            header = self.header | {"If-None-Match": f'W/"{etag}"'}
+        else:
+            header = self.header
         try:
             connection = self.get_connection(self.host, 443)
-            connection.request("HEAD", url, message_data, self.header)
+            connection.request("GET", url, message_data, header)
             response = connection.getresponse()
         except (socket.gaierror, TimeoutError):
             connection.close()
-            return None
-        if response.status == 200:
-            last_modified = response.getheader("Last-Modified")
-            connection.close()
-            return last_modified
-        connection.close()
-        return False
-
-
-    def get_detectable_apps(self, save_path):
-        """Get and save list (as ndjson) of detectable applications, containing all detectable games"""
-        message_data = None
-        url = "/api/v9/applications/detectable"
-        try:
-            connection = self.get_connection(self.host, 443)
-            connection.request("GET", url, message_data, self.header)
-            response = connection.getresponse()
-        except (socket.gaierror, TimeoutError):
-            connection.close()
-            return None
+            return None, etag
         json_array_objects = peripherals.json_array_objects   # to skip name lookup
         if response.status == 200:
+            etag = response.getheader("ETag")[3:-1]
+            save_path = os.path.expanduser(os.path.join(save_dir, f"detectable_apps_{etag}.ndjson"))
             using_orjson = json.__name__ == "orjson"
             if using_orjson:
                 nl = b"\n"
@@ -2082,20 +2071,23 @@ class Discord():
                     for app in json_array_objects(response):
                         executables = []
                         for exe in app["executables"]:
-                            os = exe["os"]
-                            os = 0 if os == "linux" else 1 if os == "win32" else 2 if os == "darwin" else None
-                            if os is not None:
+                            exe_os = exe["os"]
+                            exe_os = 0 if exe_os == "linux" else 1 if exe_os == "win32" else 2 if exe_os == "darwin" else None
+                            if exe_os is not None:
                                 path_piece = exe["name"].lower()
                                 if not path_piece.startswith("/"):
                                     path_piece = "/" + path_piece
-                                executables.append((os, path_piece))
+                                executables.append((exe_os, path_piece))
                         if not executables:
                             continue
                         ready_app = (app["id"], app["name"], executables)
                         f.write(json.dumps(ready_app) + nl)
                 except Exception as e:
                     logger.error(f"Error decoding detectable apps json: {e}")
-                    return False
-                return True
+                    return False, etag
+                return True, etag
+        elif response.status == 304:   # not modified
+            save_path = os.path.expanduser(os.path.join(save_dir, f"detectable_apps_{etag}.ndjson"))
+            return save_path, etag
         connection.close()
-        return False
+        return False, etag

@@ -2235,9 +2235,12 @@ class TUI():
                     key = f"ALT+{sequence[1]}"
                 elif sequence == [27, 91, 50, 48, 48, 126]:
                     self.bracket_paste = True
+                    self.misspelled = []
                     continue
                 elif sequence == [27, 91, 50, 48, 49, 126]:
                     self.bracket_paste = False
+                    self.spellcheck()
+                    self.draw_input_line()
                     continue
                 elif sequence[-1] == -1 and sequence[-2] == 27:
                     # holding escape key

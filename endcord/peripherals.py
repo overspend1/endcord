@@ -21,8 +21,6 @@ import pexpect.popen_spawn
 from endcord import defaults
 
 logger = logging.getLogger(__name__)
-match_first_non_alfanumeric = re.compile(r"^[^\w_]*")
-match_split = re.compile(r"[^\w']")
 APP_NAME = "endcord"
 ASPELL_TIMEOUT = 0.1   # aspell limit for looking-up one word
 NO_NOTIFY_SOUND_DE = ("kde", "plasma")   # linux desktops without notification sound
@@ -827,7 +825,7 @@ class SpellCheck():
         self.aspell_mode = aspell_mode
         self.aspell_language = aspell_language
         self.enable = False
-        self.command = ["aspell", "-a", f"--sug-mode={aspell_mode}", f"--lang={aspell_language}"]
+        self.lock = threading.Lock()
         if aspell_mode:
             aspell_path = find_aspell()
             if aspell_path:
@@ -855,56 +853,38 @@ class SpellCheck():
 
     def check_word_pexpect(self, word):
         """Spellcheck single word with aspell"""
-        try:
-            if word.isdigit():
-                return False   # dont spellcheck numbers
-            self.proc.sendline(word)
-            self.proc.expect(r"\*|\&|\#", timeout=ASPELL_TIMEOUT)
-            after = self.proc.after
-            if after in ("&", "#"):
-                return True
-            return False
-        except pexpect.exceptions.TIMEOUT:
-            return False   # if timed-out return it as correct
-        except pexpect.exceptions.EOF as e:
-            logger.info(e)
-            if self.enable:
-                self.start_aspell()
+        if word.isdigit():
+            return False   # dont spellcheck numbers
+        with self.lock:
+            try:
+                self.proc.sendline(word)
+                self.proc.expect(r"[\r\n]+", timeout=ASPELL_TIMEOUT)
+                line = self.proc.readline().strip()
+                return line and line[0] in ("&", "#")
+            except pexpect.exceptions.TIMEOUT:
+                return False   # if timed-out return it as correct
+            except pexpect.exceptions.EOF:
+                if self.enable:
+                    self.start_aspell()
                 return False
 
 
-    def check_word_subprocess(self, word):
-        """Spellcheck single word with aspell"""
-        try:
-            proc = subprocess.Popen(
-                self.command,
-                stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.DEVNULL,
-            )
-            output, error = proc.communicate(word.encode())
-            check = output.decode().split("\n")[1]
-            if check == "*":
-                return False
-            return True
-        except FileNotFoundError:   # aspell not installed
-            return False
-
-
-    def check_sentence(self, sentence):
-        """
-        Spellcheck a sentence with aspell.
-        Excluding last word if there is no space after it.
-        Return list of bools representing whether each word is misspelled or not.
-        """
-        misspelled = []
-        if self.enable:
-            for word in re.split(match_split, sentence):
-                if word == "":
-                    misspelled.append(False)
-                else:
-                    misspelled.append(self.check_word_pexpect(word))
-        return misspelled
+    # def check_word_subprocess(self, word):
+    #     """Spellcheck single word with aspell"""
+    #     try:
+    #         proc = subprocess.Popen(
+    #             [self.aspell_path, "-a", f"--sug-mode={self.aspell_mode}", f"--lang={self.aspell_language}"],
+    #             stdin=subprocess.PIPE,
+    #             stdout=subprocess.PIPE,
+    #             stderr=subprocess.DEVNULL,
+    #         )
+    #         output, error = proc.communicate(word.encode())
+    #         check = output.decode().split("\n")[1]
+    #         if check == "*":
+    #             return False
+    #         return True
+    #     except FileNotFoundError:   # aspell not installed
+    #         return False
 
 
     def check_list(self, words):
@@ -918,8 +898,7 @@ class SpellCheck():
                 if word == "":
                     misspelled.append(False)
                 else:
-                    # regex here might cause troubles with non-latin characters
-                    misspelled.append(self.check_word_pexpect(re.sub(match_first_non_alfanumeric, "", word)))
+                    misspelled.append(self.check_word_pexpect(word))
         else:
             return [False] * len(words)
         return misspelled
