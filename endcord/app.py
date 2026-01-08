@@ -1240,14 +1240,15 @@ class Endcord:
             self.update_tabs(add_current=True)
 
 
-    def reset_actions(self):
-        """Reset all actions"""
-        self.replying = {
-            "id": None,
-            "username": None,
-            "global_name": None,
-            "mention": None,
-        }
+    def reset_states(self, replying=False, reacting=True):
+        """Reset all states except replying"""
+        if replying:
+            self.replying = {
+                "id": None,
+                "username": None,
+                "global_name": None,
+                "mention": None,
+            }
         self.editing = None
         self.deleting = None
         self.downloading_file = {
@@ -1262,12 +1263,13 @@ class Endcord:
             "channel_id": None,
             "guild_id": None,
         }
-        self.reacting = {
-            "id": None,
-            "msg_index": None,
-            "username": None,
-            "global_name": None,
-        }
+        if reacting:
+            self.reacting = {
+                "id": None,
+                "msg_index": None,
+                "username": None,
+                "global_name": None,
+            }
         self.view_reactions = {
             "message_id": None,
             "reactions": [],
@@ -1313,6 +1315,8 @@ class Endcord:
         logger.info("Input handler loop started")
 
         while self.run:
+            if self.reacting["id"]:
+                self.restore_input_text = (self.restore_input_text[0], "react")
             if self.restore_input_text[1] == "prompt":
                 self.stop_extra_window()
                 self.restore_input_text = (None, "after prompt")
@@ -1364,12 +1368,12 @@ class Endcord:
                 sel_channel = self.tree_metadata[tree_sel]
                 guild_id, parent_id, guild_name = self.find_parents_from_tree(tree_sel)
                 self.switch_channel(sel_channel["id"], sel_channel["name"], guild_id, guild_name, parent_hint=parent_id)
-                self.reset_actions()
+                self.reset_states(replying=True)
                 self.update_status_line()
 
             # reply
             elif action == 1 and self.messages:
-                self.reset_actions()
+                self.reset_states()
                 message = self.messages[self.lines_to_msg(chat_sel)]
                 if "deleted" not in message and "pending" not in message:
                     if message["user_id"] == self.my_id:
@@ -1390,7 +1394,7 @@ class Endcord:
                 self.restore_input_text = (input_text, "standard")
                 message = self.messages[self.lines_to_msg(chat_sel)]
                 if message["user_id"] == self.my_id and "deleted" not in message and "pending" not in message:
-                    self.reset_actions()
+                    self.reset_states()
                     self.editing = message["id"]
                     self.add_to_store(self.active_channel["channel_id"], input_text)
                     self.restore_input_text = (emoji.demojize(message["content"]), "edit")
@@ -1401,7 +1405,7 @@ class Endcord:
                 self.restore_input_text = (input_text, "standard")
                 message = self.messages[self.lines_to_msg(chat_sel)]
                 if (message["user_id"] == self.my_id or self.active_channel["admin"]) and "deleted" not in message and "pending" not in message:
-                    self.reset_actions()
+                    self.reset_states()
                     self.ignore_typing = True
                     self.deleting = message["id"]
                     self.add_to_store(self.active_channel["channel_id"], input_text)
@@ -1509,7 +1513,7 @@ class Endcord:
             elif action == 11:
                 self.add_to_store(self.active_channel["channel_id"], input_text)
                 self.restore_input_text = (None, "prompt")
-                self.reset_actions()
+                self.reset_states()
                 self.ignore_typing = True
                 self.cancel_download = True
                 self.update_status_line()
@@ -1676,9 +1680,8 @@ class Endcord:
                             self.tui.assist_start,
                             self.tui.input_index,
                         )
-                        if not self.reacting:
-                            self.reset_actions()
-                            self.update_status_line()
+                        self.reset_states(reacting=False)
+                        self.update_status_line()
                         if new_input_text:
                             if self.search and self.extra_bkp:
                                 self.restore_input_text = (new_input_text, "search")
@@ -1715,7 +1718,7 @@ class Endcord:
             # search
             elif action == 29:
                 if not self.search:
-                    self.reset_actions()
+                    self.reset_states()
                     self.add_to_store(self.active_channel["channel_id"], input_text)
                     self.restore_input_text = (None, "search")
                     self.search = True
@@ -1728,7 +1731,7 @@ class Endcord:
                     self.extra_window_open = True
                 else:
                     self.close_extra_window()
-                    self.reset_actions()
+                    self.reset_states()
                     self.search = False
                     self.tui.disable_wrap_around(False)
                     self.search_end = False
@@ -1777,7 +1780,7 @@ class Endcord:
                         if message_id:
                             self.go_to_message(message_id)
                 else:
-                    self.reset_actions()
+                    self.reset_states()
                     self.add_to_store(self.active_channel["channel_id"], input_text)
                     self.ignore_typing = True
                     self.going_to_ch = channels
@@ -1839,7 +1842,7 @@ class Endcord:
             elif action == 38:
                 if not self.command:
                     self.update_extra_line(force=True)
-                    self.reset_actions()
+                    self.reset_states()
                     self.add_to_store(self.active_channel["channel_id"], input_text)
                     self.restore_input_text = (None, "command")
                     self.command = True
@@ -1858,7 +1861,7 @@ class Endcord:
                 else:
                     self.tui.instant_assist = False
                     self.close_extra_window()
-                    self.reset_actions()
+                    self.reset_states()
                     self.command = False
                     self.update_status_line()
                     self.stop_assist()
@@ -1883,7 +1886,7 @@ class Endcord:
             # search gif
             elif action == 44:
                 if not self.search_gif:
-                    self.reset_actions()
+                    self.reset_states()
                     self.add_to_store(self.active_channel["channel_id"], input_text)
                     self.restore_input_text = (None, "search")
                     self.search_gif = True
@@ -1892,7 +1895,7 @@ class Endcord:
                     self.extra_window_open = True
                 else:
                     self.close_extra_window()
-                    self.reset_actions()
+                    self.reset_states()
                     self.search_gif = False
                     self.update_status_line()
                     self.stop_assist()
@@ -1956,7 +1959,7 @@ class Endcord:
                             self.active_channel["guild_name"],
                             parent_hint=self.active_channel["channel_id"],
                         )
-                        self.reset_actions()
+                        self.reset_states()
                         self.update_status_line()
                     elif chat_line_map:
                         msg_index = chat_line_map[0]
@@ -2090,10 +2093,10 @@ class Endcord:
                 if self.recording:
                     self.stop_recording(cancel=True)
                 elif self.reacting["id"]:
-                    self.reset_actions()
+                    self.reset_states()
                     self.restore_input_text = (None, None)
                 elif self.uploading:
-                    self.reset_actions()
+                    self.reset_states()
                     self.tui.set_input_index(0)
                     self.restore_input_text = (None, None)   # load text from cache
                 elif self.assist_word and not self.tui.instant_assist:
@@ -2102,7 +2105,7 @@ class Endcord:
                     elif self.command:
                         self.restore_input_text = (input_text, "command")
                     elif self.assist_type == 6:   # app command
-                        self.reset_actions()
+                        self.reset_states()
                         self.tui.set_input_index(0)
                         self.restore_input_text = ("", "standard")
                     else:
@@ -2110,17 +2113,17 @@ class Endcord:
                 elif self.extra_window_open:
                     self.stop_extra_window(update=False)
                 elif self.replying["id"]:
-                    self.reset_actions()
+                    self.reset_states(replying=True)
                     self.restore_input_text = (input_text, "standard")
                 elif self.editing:
                     self.restore_input_text = (None, None)
-                    self.reset_actions()
+                    self.reset_states()
                 elif self.restore_input_text[1] == "after prompt":
-                    self.reset_actions()
+                    self.reset_states()
                     self.restore_input_text = (None, None)
                 else:
                     self.update_extra_line()
-                    self.reset_actions()
+                    self.reset_states()
                     self.restore_input_text = (input_text, "standard")
                     self.execute_extensions_methods("on_escape_key")
                 self.update_status_line()
@@ -2151,9 +2154,8 @@ class Endcord:
                         self.tui.assist_start,
                         self.tui.input_index,
                     )
-                    if not self.reacting:
-                        self.reset_actions()
-                        self.update_status_line()
+                    self.reset_states(reacting=False)
+                    self.update_status_line()
                     # 1000000 means its command execution and should restore text from store
                     if new_input_text is not None and new_index != 1000000:
                         if (self.search or self.search_gif) and self.extra_bkp:
@@ -2180,7 +2182,7 @@ class Endcord:
 
                 if input_text.lower() != "y" and (self.deleting or self.cancel_download or self.hiding_ch["channel_id"]):
                     # anything not "y" when asking for "[Y/n]"
-                    self.reset_actions()
+                    self.reset_states()
                     self.update_status_line()
                     continue
 
@@ -2235,7 +2237,7 @@ class Endcord:
                 elif self.search:
                     self.do_search(input_text)
                     self.restore_input_text = (None, "search")
-                    self.reset_actions()
+                    self.reset_states()
                     self.ignore_typing = True
                     self.update_status_line()
                     continue
@@ -2255,7 +2257,7 @@ class Endcord:
                     extra_title, extra_body = formatter.generate_extra_window_search_gif(self.search_messages, max_w)
                     self.tui.draw_extra_window(extra_title, extra_body, select=True)
                     self.restore_input_text = (None, "search")
-                    self.reset_actions()
+                    self.reset_states()
                     self.ignore_typing = True
                     self.update_status_line()
                     continue
@@ -2288,7 +2290,7 @@ class Endcord:
                     try:
                         num = max(int(input_text) - 1, 0)
                     except ValueError:
-                        self.reset_actions()
+                        self.reset_states()
                         self.update_status_line()
                         continue
                     if num <= len(self.going_to_ch):
@@ -2392,7 +2394,7 @@ class Endcord:
                         stickers=stickers,
                     )
 
-                self.reset_actions()
+                self.reset_states()
 
             # enter with no text
             elif input_text == "":
@@ -2407,7 +2409,7 @@ class Endcord:
                         self.active_channel["guild_name"],
                         parent_hint=self.active_channel["channel_id"],
                     )
-                    self.reset_actions()
+                    self.reset_states()
                     self.update_status_line()
 
                 if self.deleting:
@@ -2509,7 +2511,7 @@ class Endcord:
                             self.update_extra_line("Network error.")
                             self.restore_input_text = (input_text, "standard")
 
-                self.reset_actions()
+                self.reset_states()
 
 
     def can_run_command(self, cmd_type):
@@ -2536,7 +2538,7 @@ class Endcord:
             return
 
         if not self.can_run_command(cmd_type):
-            self.reset_actions()
+            self.reset_states()
             self.update_status_line()
             self.update_extra_line("This command cant be executed in forum.")
             return
@@ -2635,7 +2637,7 @@ class Endcord:
         elif cmd_type == 7:   # CANCEL
             reset = False
             self.restore_input_text = (None, "prompt")
-            self.reset_actions()
+            self.reset_states()
             self.ignore_typing = True
             self.cancel_download = True
 
@@ -2708,7 +2710,7 @@ class Endcord:
             if channel_sel and channel_sel["type"] not in (-1, 1, 11, 12):
                 self.restore_input_text = (None, "prompt")
                 reset = False
-                self.reset_actions()
+                self.reset_states()
                 self.ignore_typing = True
                 guild_id = self.find_parents_from_tree(tree_sel)[0]
                 self.hiding_ch = {
@@ -2723,14 +2725,14 @@ class Endcord:
                 reset = False
                 self.do_search(search_text)
                 self.restore_input_text = (None, "search")
-                self.reset_actions()
+                self.reset_states()
                 self.extra_window_open = True
                 self.search = True
                 self.tui.disable_wrap_around(True)
                 self.ignore_typing = True
             elif not self.search:
                 reset = False
-                self.reset_actions()
+                self.reset_states()
                 self.restore_input_text = (None, "search")
                 self.search = True
                 self.tui.disable_wrap_around(True)
@@ -3174,14 +3176,14 @@ class Endcord:
                 extra_title, extra_body = formatter.generate_extra_window_search_gif(self.search_messages, max_w)
                 self.tui.draw_extra_window(extra_title, extra_body, select=True)
                 self.restore_input_text = (None, "search")
-                self.reset_actions()
+                self.reset_states()
                 self.search = True
                 self.ignore_typing = True
                 self.update_status_line()
                 self.extra_window_open = True
             elif not self.search:
                 reset = False
-                self.reset_actions()
+                self.reset_states()
                 self.restore_input_text = (None, "search")
                 self.search_gif = True
                 self.ignore_typing = True
@@ -3464,7 +3466,7 @@ class Endcord:
             self.gateway.set_offline()
             self.update_extra_line("Network error.")
         if reset:
-            self.reset_actions()
+            self.reset_states()
             self.restore_input_text = (None, None)
         self.update_status_line()
 
@@ -6774,7 +6776,7 @@ class Endcord:
         self.premium = self.gateway.get_premium()
         self.my_user_data = self.gateway.get_my_user_data()
         self.update_prompt()
-        self.reset_actions()
+        self.reset_states(replying=True)
         self.update_status_line()
         self.session_id = self.gateway.session_id
         self.my_status["client_state"] = "online"
@@ -6987,7 +6989,7 @@ class Endcord:
                     new_message = self.execute_extensions_methods("on_message_event", new_message, cache=True)[0]
                     new_message_channel_id = new_message["d"]["channel_id"]
                     this_channel = (new_message_channel_id == self.active_channel["channel_id"])
-                    if this_channel:
+                    if this_channel and self.get_chat_last_message_id() == self.last_message_id:   # if its scrolled far up, this channel bot is cached
                         self.process_msg_events_active_channel(new_message, selected_line)
                     # handle cached channels
                     elif self.limit_channel_cache:
