@@ -1439,6 +1439,7 @@ def generate_status_line(my_user_data, my_status, unseen, typing, active_channel
         %task   # currently running long task
         %tabs
         %slowmode   # 'slowmode {time}'
+        %afk   # '[AFK]'
     Possible options for format_rich:
         %type
         %name
@@ -1591,6 +1592,7 @@ def generate_status_line(my_user_data, my_status, unseen, typing, active_channel
         .replace("%task", task)
         .replace("%tabs", tabs)
         .replace("%slowmode", slowmode)
+        .replace("%afk", "[AFK]" if my_status["afk"] else "")
     )
 
     status_line_format = []
@@ -2113,7 +2115,7 @@ def generate_extra_window_reactions(reaction, details, max_len):
     title_line = f"Users who reacted {reaction["emoji"]}: "
     body = []
     for user in details:
-        body.append(user["username"][:max_len])
+        body.append(f"{user["global_name"]} ({user["username"]})"[:max_len])
     return title_line[:max_len], body
 
 

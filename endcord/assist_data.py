@@ -54,6 +54,7 @@ COMMAND_ASSISTS = (
     ("custom_status [string] - set custom status text", "custom_status"),
     ("custom_status_emoji [emoji] - set custom status emoji", "custom_status_emoji"),
     ("custom_status_remove - remove custom status", "custom_status_remove"),
+    ("toggle_afk - toggle afk state; if afk, mobile devices will receive notifications", "toggle_afk"),
     ("block *ignore <@[user_id]> - block/ignore user", "block"),
     ("unblock *ignore <@[user_id]> - unblock/unignore user", "unblock"),
     ("toggle_blocked_messages - toggle showing messages from blocked users in chat", "toggle_blocked_messages"),

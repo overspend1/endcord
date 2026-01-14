@@ -847,6 +847,9 @@ def command_string(text):
         except (IndexError, ValueError):
             pass
 
+    # 65 - TOGGLE_AFK
+    elif text_lower.startswith("toggle_afk"):
+        cmd_type = 65
 
     # 66 - 666
     elif text_lower == "666":

@@ -97,6 +97,8 @@
     Set custom status emoji.
 - `custom_status_remove`  
     Remove custom status.
+- `toggle_afk`  
+    Toggle afk state. If afk, mobile devices will receive notifications.
 - `block *ignore <@[user_id]>`  
     Block user. `ignore` is optional.
 - `unblock *ignore <@[user_id]>`  

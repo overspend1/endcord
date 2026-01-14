@@ -369,7 +369,8 @@ Open link in browser - `Alt+O`
 This mode entirely replaces curses with pygame-ce GUI library. This means Endcord runs in its own window, not in terminal, but UI remains terminal-like.  
 Tray icon will also be enabled, so closing window will only minimize it to tray.  
 Keybinding remain the same, but all codes are like on Linux, so old keybinding codes may not work on Windows.  
-If using external editor, use some with graphical interface. TUI editors will not work, as this is no longer in terminal.  
+If using external editor, use editor with graphical interface. TUI editors will not work, as this is no longer in terminal.  
+Also, endcord built-in media player will not work because its standalone TUI thats not using curses. All meda will be opened in native player.  
 Building with nuitka on python >=3.13 will create executable that segfaults! Building with pyinstaller is not recommended because it generates huge binary.  
 You can toggle experimental mode bu running: `uv run build.py --experimental`.  
 Then run endcord from source: `uv run main.py`.  
@@ -435,6 +436,7 @@ Never tested on macOS. Feedback is welcome.
 > **Use endcord at your own risk!**
 > For more info see [FAQ](#FAQ).
 
+Third party endcord forks may add features that can lead to account ban, or contain malicious code, cause instability, especially if they include LLM generated/modified code.
 
 ## Building
 To see all build script options, run: `uv run build.py -h`.  

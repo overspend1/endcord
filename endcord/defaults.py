@@ -85,7 +85,7 @@ theme = {
     "format_interaction": "                       ╭──⤙ %global_name used [%command]",
     "format_one_reaction": "%count:%reaction",
     "format_timestamp": "%H:%M",
-    "format_status_line_l": " %global_name (%username) - %status  %unreads %action %typing",
+    "format_status_line_l": " %global_name (%username) - %status %afk %unreads %action %typing",
     "format_status_line_r": "%slowmode",
     "format_title_line_l": " %server: %channel",
     "format_title_line_r": "%tabs",

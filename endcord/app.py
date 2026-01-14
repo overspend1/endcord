@@ -584,6 +584,7 @@ class Endcord:
                 "custom_status": None,
                 "custom_status_emoji": None,
                 "activities": [],
+                "afk": False,
                 "client_state": "OFFLINE",
             }
         for num, _ in enumerate(self.channel_cache):
@@ -623,6 +624,7 @@ class Endcord:
             custom_status=self.my_status["custom_status"],
             custom_status_emoji=self.my_status["custom_status_emoji"],
             activities=self.my_activities,
+            afk=self.my_status["afk"],
         )
 
         new_messages = self.get_messages_with_members()
@@ -3301,6 +3303,7 @@ class Endcord:
                     custom_status=self.my_status["custom_status"],
                     custom_status_emoji=self.my_status["custom_status_emoji"],
                     activities=self.my_activities,
+                    afk=self.my_status["afk"],
                 )
 
         elif cmd_type == 45:   # BLOCK
@@ -3490,6 +3493,17 @@ class Endcord:
             )).start()
 
         # 64 - COPY_LINK is handled together with 5 - OPEN_LINK
+
+        elif cmd_type == 65:   # TOGGLE_AFK
+            self.my_status["afk"] = not self.my_status["afk"]
+            self.gateway.update_presence(
+                self.my_status["status"],
+                custom_status=self.my_status["custom_status"],
+                custom_status_emoji=self.my_status["custom_status_emoji"],
+                activities=self.my_activities,
+                afk=self.my_status["afk"],
+            )
+            self.update_status_line()
 
         elif cmd_type == 66 and self.fun:   # 666
             self.fun = 1 if self.fun == 2 else 2
@@ -4379,6 +4393,7 @@ class Endcord:
                 custom_status=self.my_status["custom_status"],
                 custom_status_emoji=self.my_status["custom_status_emoji"],
                 activities=self.my_activities,
+                afk=self.my_status["afk"],
             )
             if self.my_status["custom_status_emoji"]:
                 custom_status_emoji_name = self.my_status["custom_status_emoji"]["name"]
@@ -7023,6 +7038,7 @@ class Endcord:
             custom_status=self.my_status["custom_status"],
             custom_status_emoji=self.my_status["custom_status_emoji"],
             activities=self.my_activities,
+            afk=self.my_status["afk"],
         )
 
         # start input and sender threads
@@ -7184,6 +7200,7 @@ class Endcord:
                         custom_status=self.my_status["custom_status"],
                         custom_status_emoji=self.my_status["custom_status_emoji"],
                         activities=self.my_activities,
+                        afk=self.my_status["afk"],
                     )
 
             # send new detectable games activities
@@ -7199,6 +7216,7 @@ class Endcord:
                         custom_status=self.my_status["custom_status"],
                         custom_status_emoji=self.my_status["custom_status_emoji"],
                         activities=self.my_activities,
+                        afk=self.my_status["afk"],
                     )
 
             # remove expired typing
@@ -7309,6 +7327,7 @@ class Endcord:
                     custom_status=self.my_status["custom_status"],
                     custom_status_emoji=self.my_status["custom_status_emoji"],
                     activities=self.my_activities,
+                    afk=self.my_status["afk"],
                 )
 
             # check changes in presences and update tree

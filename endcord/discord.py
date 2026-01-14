@@ -442,6 +442,7 @@ class Discord():
                 reaction.append({
                     "id": user["id"],
                     "username": user["username"],
+                    "global_name": user["global_name"],
                 })
             return reaction
         logger.error(f"Failed to fetch reaction details: {reaction}. Response code: {response.status}")
