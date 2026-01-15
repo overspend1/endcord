@@ -6170,6 +6170,7 @@ class Endcord:
             if data["channel_id"] == self.active_channel["channel_id"]:
                 self.last_message_id = data["id"]
                 self.new_unreads = True
+                self.update_status_line()
             if self.emoji_as_text:
                 data = formatter.demojize_message(data)
             if data.get("user_id") == self.my_id and self.show_pending_messages:

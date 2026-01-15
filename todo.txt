@@ -20,7 +20,10 @@ Voice calls
     send and receive RTCP?
     send speaking event?
 
-Show inline media in chat - after fixing https://github.com/python/cpython/issues/119138
+after fixing https://github.com/python/cpython/issues/119138
+    Show inline media in chat
+    Add bg color for mentions and channels in chat
+
 Fix per-channel member list
 Video calls
 Localization

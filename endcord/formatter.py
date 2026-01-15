@@ -1942,7 +1942,7 @@ def generate_extra_window_summaries(summaries, max_len, channel_name=None):
     body = []
     indexes = []
     if summaries:
-        for summary in summaries:
+        for summary in reversed(summaries):
             summary_date = timestamp_from_snowflake(int(summary["message_id"]), "%m-%d-%H:%M")
             summary_string = f"[{summary_date}] - {summary["topic"]}: {summary["description"]}"
             summary_lines = split_long_line(summary_string, max_len, align=16)
