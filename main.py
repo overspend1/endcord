@@ -100,12 +100,12 @@ def main(args):
             importlib.util.find_spec("av") is not None and
             importlib.util.find_spec("nacl") is not None
         ):
-            sys.exit("Ascii media player is not supported")
+            sys.exit("Terminal media player is not supported")
         from endcord import media
         if uses_pgcurses:
             curses.enable_tray = False
         try:
-            media.ascii_runner(args.media, config, keybindings)
+            media.runner(args.media, config, keybindings)
         except curses.error as e:
             if str(e) != "endwin() returned ERR":
                 logger.error(traceback.format_exc())

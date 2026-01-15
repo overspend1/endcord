@@ -173,6 +173,7 @@ class TerminalMedia():
         self.keybindings = {key: (val,) if not isinstance(val, tuple) else val for key, val in keybindings.items()}
         if self.default_color == -1:
             self.default_color = 0
+        self.external = external
         if external:
             signal.signal(signal.SIGINT, self.sigint_handler)
         self.ascii_palette_len = len(self.ascii_palette) - 1
@@ -200,6 +201,7 @@ class TerminalMedia():
         """Handling Ctrl-C event"""
         self.stop_playback()
         time.sleep(1)
+        terminal_utils.leave_tui()
         sys.exit()   # failsafe
 
 
@@ -546,7 +548,7 @@ class TerminalMedia():
             logger.warning("Cant play youtube link, yt-dlp path is invalid")
 
 
-    def play(self, path):
+    def play(self, path, hint=None):
         """Select runner based on file type"""
         if not path:
             return
@@ -573,6 +575,8 @@ class TerminalMedia():
                 self.play_video(path)
             else:
                 mime = get_mime(path).split("/")
+                if hint:
+                    mime = [hint, None]
                 if mime[0] == "image":
                     if mime[1] == "gif":
                         self.media_type = "gif"
@@ -591,6 +595,8 @@ class TerminalMedia():
                 else:
                     logger.warning(f"Unsupported media format: {mime}")
                     self.run = False
+                    if self.external:
+                        sys.exit(f"Unsupported media format: {mime}")
             while self.run:   # dont exit when video ends
                 time.sleep(0.2)
         except Exception as e:
@@ -708,7 +714,7 @@ class TerminalMedia():
                 self.control_codes(104)
 
 
-def ascii_runner(path, config, keybindings):
+def runner(path, config, keybindings):
     """Main function"""
     path = os.path.expanduser(path)
     if not os.path.exists(path):
