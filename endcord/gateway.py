@@ -764,29 +764,25 @@ class Gateway():
                     time_log_string += f"    DMs - {round((time.time() - ready_time_mid) * 1000, 3)}ms\n"
                     ready_time_mid = time.time()
                     # unread messages and pings
-                    read_state = []
-                    msg_ping = []
                     for channel in double_get(data, "read_state", "entries", default=[]):
                         # last_message_id in unread_state is actually last_ACKED_message_id
                         if "last_message_id" in channel and "mention_count" in channel:
-                            read_state.append((channel["id"], channel["last_message_id"]))
-                            if channel["mention_count"]:
-                                msg_ping.append(channel["id"])
-                    for channel_id, last_acked in read_state:   # add relevant data
-                        for last_message in last_messages:
-                            if last_message["channel_id"] == channel_id:
-                                last_message_id = last_message["message_id"]
-                                break
-                        else:
-                            continue
-                        unseen_channel = {
-                            "last_message_id": last_message_id,
-                            "last_acked_message_id": last_acked or 0,   # dont allow it to be None
-                            "mentions": ["True"] if channel_id in msg_ping else [],   # message_id is unknown
-                        }
-                        if not last_message_id or int(unseen_channel["last_acked_message_id"]) < int(last_message_id):
-                            unseen_channel["last_acked_unreads_line"] = unseen_channel["last_acked_message_id"]
-                        self.read_state[channel_id] = unseen_channel
+                            channel_id = channel["id"]
+                            last_acked = channel["last_message_id"]
+                            for last_message in last_messages:
+                                if last_message["channel_id"] == channel_id:
+                                    last_message_id = last_message["message_id"]
+                                    break
+                            else:
+                                continue
+                            unseen_channel = {
+                                "last_message_id": last_message_id,
+                                "last_acked_message_id": last_acked or 0,   # dont allow it to be None
+                                "mentions": ["True"] * channel["mention_count"] if channel["mention_count"] else [],   # message_id is unknown
+                            }
+                            if not last_message_id or int(unseen_channel["last_acked_message_id"]) < int(last_message_id):
+                                unseen_channel["last_acked_unreads_line"] = unseen_channel["last_acked_message_id"]
+                            self.read_state[channel_id] = unseen_channel
                     time_log_string += f"    read state ({len(self.read_state)} channels) - {round((time.time() - ready_time_mid) * 1000, 3)}ms\n"
                     ready_time_mid = time.time()
                     # guild and dm settings

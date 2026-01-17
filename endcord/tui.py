@@ -498,7 +498,6 @@ class TUI():
             self.screen.noutrefresh()
             self.need_update.set()
         self.draw_status_line()
-        self.draw_chat()
         self.update_prompt(self.prompt)
         self.spellcheck()
         self.draw_input_line()
@@ -510,6 +509,7 @@ class TUI():
         self.draw_extra_line(self.extra_line_text)
         self.draw_extra_window(self.extra_window_title, self.extra_window_body, self.extra_select)
         self.draw_member_list(self.member_list, self.member_list_format, force=True, clean=not(redraw_only))
+        self.draw_chat()
 
 
     def resize_bordered(self, redraw_only=False):
@@ -569,7 +569,6 @@ class TUI():
         self.draw_border(win_prompt_input_line, top=False)
         self.draw_status_line()
         self.draw_border(chat_hwyx, top=not(self.have_title))
-        self.draw_chat()
         self.update_prompt(self.prompt)
         self.spellcheck()
         self.draw_input_line()
@@ -588,6 +587,7 @@ class TUI():
             self.screen.addstr(y, x - 1, self.corner_ul, curses.color_pair(self.default_color))
             self.screen.addstr(y, x + extra_window_hwyx[1], self.corner_ur, curses.color_pair(self.default_color))
         self.draw_member_list(self.member_list, self.member_list_format, force=True, clean=not(redraw_only))
+        self.draw_chat()
         self.screen.noutrefresh()
         self.need_update.set()
 
@@ -1049,55 +1049,58 @@ class TUI():
         w += 2
         y -= 1
         x -= 1
+        
+        try:
+            # lines
+            if top and w > 0:
+                self.screen.hline(y, x + 1, curses.ACS_HLINE, w - 2, curses.color_pair(self.default_color))
+            if bot and w > 0:
+                self.screen.hline(y + h - 1, x + 1, curses.ACS_HLINE, w - 2, curses.color_pair(self.default_color))
+            if left and h > 0:
+                self.screen.vline(y + 1, x, curses.ACS_VLINE, h - 2, curses.color_pair(self.default_color))
+            if right and h > 0:
+                self.screen.vline(y + 1, x + w - 1, curses.ACS_VLINE, h - 2, curses.color_pair(self.default_color))
 
-        # lines
-        if top and w > 0:
-            self.screen.hline(y, x + 1, curses.ACS_HLINE, w - 2, curses.color_pair(self.default_color))
-        if bot and w > 0:
-            self.screen.hline(y + h - 1, x + 1, curses.ACS_HLINE, w - 2, curses.color_pair(self.default_color))
-        if left and h > 0:
-            self.screen.vline(y + 1, x, curses.ACS_VLINE, h - 2, curses.color_pair(self.default_color))
-        if right and h > 0:
-            self.screen.vline(y + 1, x + w - 1, curses.ACS_VLINE, h - 2, curses.color_pair(self.default_color))
-
-        # corners
-        if top and left:
-            self.screen.addstr(y, x, self.corner_ul, curses.color_pair(self.default_color))
-        if bot and left:
-            self.screen.addstr(y + h - 1, x, self.corner_dl, curses.color_pair(self.default_color))
-        if top and right:
-            self.screen.addstr(y, x + w - 1, self.corner_ur, curses.color_pair(self.default_color))
-        if bot and right:
-            try:
+            # corners
+            if top and left:
+                self.screen.addstr(y, x, self.corner_ul, curses.color_pair(self.default_color))
+            if bot and left:
+                self.screen.addstr(y + h - 1, x, self.corner_dl, curses.color_pair(self.default_color))
+            if top and right:
+                self.screen.addstr(y, x + w - 1, self.corner_ur, curses.color_pair(self.default_color))
+            if bot and right:
+                # it errors when drawing in bottom-right cell, but still draws it
                 self.screen.addstr(y + h - 1, x + w - 1, self.corner_dr, curses.color_pair(self.default_color))
-            except curses.error:
-                pass   # it errors when drawing in bottom-right cell, but still draws it
+        except curses.error:   # errors randomly when resizing
+            pass
+
 
 
     def draw_status_line(self):
         """Draw status line"""
         with self.lock:
             h, w = self.status_hw
-            status_txt_l = self.status_txt_l[:w-1]   # limit status text size
+            status_txt_r = self.status_txt_r
+            if status_txt_r:
+                status_txt_r = status_txt_r[:w - 1 - 2*self.bordered]   # limit status text size
             # if there is enough space for right text, add spaces and right text
             if self.status_txt_r:
                 if self.bordered:
                     if self.win_extra_line or self.win_extra_window:
-                        status_txt_r = self.status_txt_r[: max(w - (len(status_txt_l) + 4), 0)] + "─" + "┤"
-                        status_txt_r = replace_spaces_dash(trim_with_dash(status_txt_r))
-                        status_txt_l = replace_spaces_dash(trim_with_dash(status_txt_l))
-                        status_txt_l = "├" + status_txt_l + "─" * (w - len(status_txt_l) - len(status_txt_r) - 1)
+                        status_txt_r = replace_spaces_dash(trim_with_dash(status_txt_r)) + "─" + "┤"
+                        status_txt_l = "├" + replace_spaces_dash(trim_with_dash(self.status_txt_l))
                     else:
-                        status_txt_r = self.status_txt_r[: max(w - (len(status_txt_l) + 4), 0)] + "─" + self.corner_ur
-                        status_txt_r = replace_spaces_dash(trim_with_dash(status_txt_r))
-                        status_txt_l = replace_spaces_dash(trim_with_dash(status_txt_l))
-                        status_txt_l = self.corner_ul + status_txt_l + "─" * (w - len(status_txt_l) - len(status_txt_r) - 1)
+                        status_txt_r = replace_spaces_dash(trim_with_dash(status_txt_r)) + "─" + self.corner_ur
+                        status_txt_l = self.corner_ul + replace_spaces_dash(trim_with_dash(self.status_txt_l))
+                    status_txt_l = status_txt_l[: max(w - (len(status_txt_r) + 2), 0)]
+                    status_txt_l = status_txt_l + "─" * (w - len(status_txt_l) - len(status_txt_r))
                     new_format_l = []
                     for item in self.status_txt_l_format:
                         new_format_l.append((item[0], item[1] + 1, min(item[2] + 1, w-1)))
                     self.status_txt_l_format = new_format_l
                 else:
-                    status_txt_r = self.status_txt_r[: max(w - (len(status_txt_l) + 4), 0)] + " "
+                    status_txt_r += " "
+                    status_txt_l = self.status_txt_l[: max(w - (len(status_txt_r) + 2), 0)]
                     status_txt_l = status_txt_l + " " * (w - len(status_txt_l) - len(status_txt_r))
                 status_line = status_txt_l + status_txt_r
                 text_l_len = len(status_txt_l)
@@ -1105,7 +1108,7 @@ class TUI():
                 for tab in self.status_txt_r_format:
                     status_format.append((tab[0], tab[1] + text_l_len, min(tab[2] + text_l_len, w-1)))
             elif self.bordered:
-                status_txt_l = replace_spaces_dash(trim_with_dash(status_txt_l))
+                status_txt_l = replace_spaces_dash(trim_with_dash(self.status_txt_l[:w - 1 - 2*self.bordered]))
                 if self.win_extra_line or self.win_extra_window:
                     status_line = "├" + status_txt_l + "─" * (w - len(status_txt_l) - 2) + "┤"
                 else:
@@ -1115,6 +1118,7 @@ class TUI():
                     status_format.append((item[0], item[1] + 1, min(item[2] + 1, w-1)))
             else:
                 # add spaces to end of line
+                status_txt_l = self.status_txt_l[:w - 1 - 2*self.bordered]
                 status_line = status_txt_l + " " * (w - len(status_txt_l))
                 status_format = self.status_txt_l_format
 
@@ -1132,19 +1136,22 @@ class TUI():
         """Draw title line, works same as status line"""
         with self.lock:
             h, w = self.title_hw
-            title_txt_l = self.title_txt_l[:w-1]
+            title_txt_r = self.title_txt_r
+            if title_txt_r:
+                title_txt_r = title_txt_r[:w - 2*self.bordered]
             if self.title_txt_r:
                 if self.bordered:
-                    title_txt_r = self.title_txt_r[: max(w - (len(title_txt_l) + 4), 0)] + "─" + self.corner_ur
-                    title_txt_r = replace_spaces_dash(trim_with_dash(title_txt_r))
-                    title_txt_l = replace_spaces_dash(trim_with_dash(title_txt_l))
-                    title_txt_l = self.corner_ul + title_txt_l + "─" * (w - len(title_txt_l) - len(title_txt_r) - 1)
+                    title_txt_r = replace_spaces_dash(trim_with_dash(title_txt_r)) + "─" + self.corner_ur
+                    title_txt_l = self.corner_ul + replace_spaces_dash(trim_with_dash(self.title_txt_l))
+                    title_txt_r = title_txt_r[: max(w - (len(title_txt_l) + 2), 0)]
+                    title_txt_l = title_txt_l + "─" * (w - len(title_txt_l) - len(title_txt_r))
                     new_format_l = []
                     for item in self.title_txt_l_format:
                         new_format_l.append((item[0], item[1] + 1, min(item[2] + 1, w-1)))
                     self.title_txt_l_format = new_format_l
                 else:
-                    title_txt_r = self.title_txt_r[: max(w - (len(title_txt_l) + 4), 0)] + " "
+                    title_txt_r += " "
+                    title_txt_r = self.title_txt_l[: max(w - (len(title_txt_r) + 2), 0)]
                     title_txt_l = title_txt_l + " " * (w - len(title_txt_l) - len(title_txt_r))
                 title_line = title_txt_l + title_txt_r
                 text_l_len = len(title_txt_l)
@@ -1152,12 +1159,13 @@ class TUI():
                 for tab in self.title_txt_r_format:
                     title_format.append((tab[0], tab[1] + text_l_len, min(tab[2] + text_l_len, w-1)))
             elif self.bordered:
-                title_txt_l = replace_spaces_dash(trim_with_dash(title_txt_l))
+                title_txt_l = replace_spaces_dash(trim_with_dash(self.title_txt_l[:w - 1 - 2*self.bordered]))
                 title_line = self.corner_ul + title_txt_l + "─" * (w - len(title_txt_l) - 2) + self.corner_ur
                 title_format = []
                 for item in self.title_txt_l_format:
                     title_format.append((item[0], item[1] + 1, min(item[2] + 1, w-1)))
             else:
+                title_txt_l = self.title_txt_l[:w - 1 - 2*self.bordered]
                 title_line = title_txt_l + " " * (w - len(title_txt_l))
                 title_format = self.title_txt_l_format
 

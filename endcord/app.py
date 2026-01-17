@@ -5382,7 +5382,7 @@ class Endcord:
         self.tab_string, self.tab_string_format = formatter.generate_tab_string(
             self.tabs_names,
             active_tab_index,
-            self.get_unseen(),
+            self.read_state,
             self.config["format_tabs"],
             self.config["tabs_separator"],
             self.config["limit_channel_name"],
@@ -5614,8 +5614,7 @@ class Endcord:
             self.dms,
             self.guilds,
             self.threads,
-            self.get_unseen(),
-            self.get_unseen(mentions=True),
+            self.read_state,
             self.guild_folders,
             self.activities,
             collapsed,
@@ -5803,7 +5802,7 @@ class Endcord:
 
         if channel_id == self.active_channel["channel_id"] and not bool(self.tui.get_chat_selected()[1]):
             self.set_channel_seen(self.active_channel["channel_id"], message_id)
-        if update_tree and not skip_unread:
+        if (update_tree or ping) and not skip_unread:
             self.update_tree()
 
 
@@ -5820,17 +5819,6 @@ class Endcord:
                 "mentions": [],
             }
         self.update_tree()
-
-
-    def get_unseen(self, mentions=False):
-        """Get list of channels that are unseen, optionally only channels that have mentions"""
-        unseen = []
-        for channel_id, channel in self.read_state.items():
-            last_message_id = channel["last_message_id"]
-            if not last_message_id or int(channel["last_acked_message_id"]) < int(last_message_id):
-                if not mentions or (mentions and channel["mentions"]):
-                    unseen.append(channel_id)
-        return unseen
 
 
 
@@ -6273,24 +6261,25 @@ class Endcord:
                 if not muted:
                     ping = False
 
-                    if message_notifications != 2:
-                        # check if this message should ping
-                        mentions = data["mentions"]
-                        # select my roles from same guild as message
-                        my_roles = []
-                        for guild in self.my_roles:
-                            if guild["guild_id"] == data["guild_id"]:
-                                my_roles = guild["roles"]
-                        if (
-                            message_notifications == 0 or
-                            (data["mention_everyone"] and not suppress_everyone) or
-                            (bool([i for i in my_roles if i in data["mention_roles"]]) and not suppress_roles) or
-                            (self.my_id in [x["id"] for x in mentions]) or
-                            (is_dm and new_message_channel_id in self.dms_vis_id)
-                        ):
-                            if not this_channel or self.new_unreads:   # new_unreads already set in process events for active channel
-                                ping = True
+                    # check if this message should ping
+                    mentions = data["mentions"]
+                    # select my roles from same guild as message
+                    my_roles = []
+                    for guild in self.my_roles:
+                        if guild["guild_id"] == data["guild_id"]:
+                            my_roles = guild["roles"]
+                    if (
+                        (data["mention_everyone"] and not suppress_everyone) or
+                        (bool([i for i in my_roles if i in data["mention_roles"]]) and not suppress_roles) or
+                        (self.my_id in [x["id"] for x in mentions]) or
+                        (is_dm and new_message_channel_id in self.dms_vis_id)
+                    ):
+                        if not this_channel or self.new_unreads:   # new_unreads already set in process events for active channel
+                            ping = True
+                        if message_notifications != 2:
                             self.send_desktop_notification(new_message)
+                    elif message_notifications == 0:
+                        self.send_desktop_notification(new_message)
 
                     # set unseen
                     if this_channel and self.new_unreads:
@@ -7241,7 +7230,8 @@ class Endcord:
                     self.set_channel_seen(self.active_channel["channel_id"], self.get_chat_last_message_id())
 
             # send pending ack
-            self.send_ack()
+            if self.pending_acks and time.time() - self.sent_ack_time > self.ack_throttling:
+                self.send_ack()
 
             # check gateway state
             gateway_state = self.gateway.get_state()

@@ -323,6 +323,33 @@ def normalize_string_count(input_string, max_length, dots=False, fill=True):
     return input_string, diff
 
 
+def normalize_string_with_suffix(input_string, suffix, max_length, emoji_safe=False):
+    """
+    Normalize length of string and add suffix to its end, by cropping it or appending spaces.
+    Set max_length to None to disable.
+    """
+    input_string = str(input_string)
+    suffix = str(suffix)
+    if not max_length:
+        return input_string + suffix
+    input_width = max_length - len(suffix)
+    if input_width <= 0:
+        return suffix[:max_length]
+    dots = len(input_string) > input_width
+    if emoji_safe:
+        input_string, length = limit_width_wch(input_string, input_width)
+        input_string += " " * (input_width - length)
+        if dots:
+            return input_string[:-3] + "..." + suffix
+        return input_string + suffix
+    input_string += " " * (input_width - len(input_string))
+    if len(input_string) > input_width:
+        if dots:
+            return input_string[:-3] + " " * (len_wch(input_string[-3:]) - 3) + "..." + suffix
+        return input_string[:input_width] + suffix
+    return input_string + suffix
+
+
 def replace_discord_emoji(text):
     """
     Transform emoji strings into nicer looking ones:
@@ -463,6 +490,29 @@ def replace_spoilers_oneline(line):
         end = string_match.end()
         line = line[:start] + "▒" * (end - start) + line[end:]
     return line
+
+
+def is_unseen(read_state):
+    """Check if given read state is unseen"""
+    if not read_state:
+        return False
+    last_acked_message_id = read_state["last_acked_message_id"]
+    if last_acked_message_id is None:
+        return False
+    last_message_id = read_state["last_message_id"]
+    if not last_message_id or int(last_acked_message_id) < int(last_message_id):
+        return True
+    return False
+
+
+def generate_count(count):
+    """Generate mention count string"""
+    if not count:
+        return ""
+    if count < 100:
+        return f" ({count})"
+    return " (99+)"
+
 
 
 def format_md_all(line, content_start, except_ranges):
@@ -1604,7 +1654,7 @@ def generate_status_line(my_user_data, my_status, unseen, typing, active_channel
     return status_line, status_line_format
 
 
-def generate_tab_string(tabs, active_tab, unseen, format_tabs, tabs_separator, limit_len, max_len):
+def generate_tab_string(tabs, active_tab, read_state, format_tabs, tabs_separator, limit_len, max_len):
     """
     Generate tabs list string according to provided formatting.
     Possible options for generate_tab_string:
@@ -1626,7 +1676,7 @@ def generate_tab_string(tabs, active_tab, unseen, format_tabs, tabs_separator, l
 
         if num == active_tab:
             tab_string_format.append([3])   # underline
-        elif tab["channel_id"] in unseen:
+        elif is_unseen(read_state.get(tab["channel_id"])):
             tab_string_format.append([1])   # bold
         else:
             tab_string_format.append(None)
@@ -2272,7 +2322,7 @@ def generate_message_notification(data, channels, roles, guild_name, convert_tim
     return title, body
 
 
-def generate_tree(dms, guilds, threads, unseen, mentioned, guild_folders, activities, collapsed, uncollapsed_threads, active_channel_id, config, folder_names=[], safe_emoji=False, max_w=0):
+def generate_tree(dms, guilds, threads, read_state, guild_folders, activities, collapsed, uncollapsed_threads, active_channel_id, config, folder_names=[], safe_emoji=False, max_w=0):
     """
     Generate channel tree according to provided formatting.
     tree_format keys:
@@ -2332,12 +2382,9 @@ def generate_tree(dms, guilds, threads, unseen, mentioned, guild_folders, activi
     })
     for dm in dms:
         name = dm["name"]
-        unseen_dm = False
-        mentioned_dm = False
-        if dm["id"] in unseen:
-            unseen_dm = True
-        if dm["id"] in mentioned:
-            mentioned_dm = True
+        ch_read_state = read_state.get(dm["id"])
+        unseen_dm = is_unseen(ch_read_state)
+        mentioned_dm = unseen_dm and ch_read_state["mentions"]
         muted = dm.get("muted", False)
         active = (dm["id"] == active_channel_id)
         if safe_emoji:
@@ -2358,7 +2405,8 @@ def generate_tree(dms, guilds, threads, unseen, mentioned, guild_folders, activi
                         break
                     name = dm_status_char + name
                     break
-        tree.append(normalize_string(f"{intersection} {name}", max_w, emoji_safe=not(safe_emoji)))
+        mention_count = generate_count(len(ch_read_state["mentions"])) if unseen_dm else ""
+        tree.append(normalize_string_with_suffix(f"{intersection} {name}", mention_count, max_w, emoji_safe=not(safe_emoji)))
         if muted:
             code += 10
         elif active and not mentioned_dm:
@@ -2444,7 +2492,7 @@ def generate_tree(dms, guilds, threads, unseen, mentioned, guild_folders, activi
         # prepare data
         muted_guild = guild.get("muted", False)
         unseen_guild = False
-        ping_guild = False
+        ping_guild = 0
         for guild_th in threads:
             if guild_th["guild_id"] == guild["guild_id"]:
                 threads_guild = guild_th["channels"]
@@ -2474,7 +2522,7 @@ def generate_tree(dms, guilds, threads, unseen, mentioned, guild_folders, activi
                     "collapsed": False,
                     "hidden": hidden,
                     "unseen": False,
-                    "ping": False,
+                    "ping": 0,
                 })
 
         # separately sort channels in their categories
@@ -2488,12 +2536,9 @@ def generate_tree(dms, guilds, threads, unseen, mentioned, guild_folders, activi
                         break
                 else:
                     threads_ch = []
-                unseen_ch = False
-                mentioned_ch = False
-                if channel["id"] in unseen:
-                    unseen_ch = True
-                if channel["id"] in mentioned:
-                    mentioned_ch = True
+                ch_read_state = read_state.get(channel["id"])
+                unseen_ch = is_unseen(ch_read_state)
+                mentioned_ch = len(ch_read_state["mentions"]) if unseen_ch else 0
                 for category in categories:
                     if channel["parent_id"] == category["id"]:
                         muted_ch = channel.get("muted", False)
@@ -2505,9 +2550,8 @@ def generate_tree(dms, guilds, threads, unseen, mentioned, guild_folders, activi
                             if unseen_ch:
                                 category["unseen"] = True
                                 unseen_guild = True
-                            if mentioned_ch:
-                                category["ping"] = True
-                                ping_guild = True
+                            category["ping"] += mentioned_ch
+                            ping_guild += mentioned_ch
                         if not hidden_ch and category["hidden"] != 2:
                             category["hidden"] = False
                         active = (channel["id"] == active_channel_id)
@@ -2530,6 +2574,7 @@ def generate_tree(dms, guilds, threads, unseen, mentioned, guild_folders, activi
                     hidden_ch = channel.get("hidden", False)
                     if not channel.get("permitted", False):
                         hidden_ch = True
+                    ping_guild += mentioned_ch
                     active = channel["id"] == active_channel_id
                     bare_channels.append({
                         "id": channel["id"],
@@ -2551,7 +2596,8 @@ def generate_tree(dms, guilds, threads, unseen, mentioned, guild_folders, activi
         name = guild["name"]
         if safe_emoji:
             name = replace_emoji_string(emoji.demojize(name))
-        tree.append(normalize_string(f"{dd_pointer} {name}", max_w, emoji_safe=not(safe_emoji)))
+        mention_count = generate_count(ping_guild)
+        tree.append(normalize_string_with_suffix(f"{dd_pointer} {name}", mention_count, max_w, emoji_safe=not(safe_emoji)))
         code = 101
         if muted_guild:
             code += 10
@@ -2594,7 +2640,8 @@ def generate_tree(dms, guilds, threads, unseen, mentioned, guild_folders, activi
                     name = category["name"]
                     if safe_emoji:
                         name = replace_emoji_string(emoji.demojize(name))
-                    tree.append(normalize_string(f"{intersection}{dd_pointer} {name}", max_w, emoji_safe=not(safe_emoji)))
+                    mention_count = generate_count(category["ping"])
+                    tree.append(normalize_string_with_suffix(f"{intersection}{dd_pointer} {name}", mention_count, max_w, emoji_safe=not(safe_emoji)))
                     code = 201
                     if category["muted"]:
                         code += 10
@@ -2623,12 +2670,13 @@ def generate_tree(dms, guilds, threads, unseen, mentioned, guild_folders, activi
                             channel_index = len(tree_format)
                             if safe_emoji:
                                 name = replace_emoji_string(emoji.demojize(name))
+                            mention_count = generate_count(channel["ping"])
                             if forum:
-                                tree.append(normalize_string(f"{pass_by}{intersection}{dd_forum} {name}", max_w, emoji_safe=not(safe_emoji)))
+                                tree.append(normalize_string_with_suffix(f"{pass_by}{intersection}{dd_forum} {name}", mention_count, max_w, emoji_safe=not(safe_emoji)))
                             elif channel_threads:
-                                tree.append(normalize_string(f"{pass_by}{intersection}{dd_pointer} {name}", max_w, emoji_safe=not(safe_emoji)))
+                                tree.append(normalize_string_with_suffix(f"{pass_by}{intersection}{dd_pointer} {name}", mention_count, max_w, emoji_safe=not(safe_emoji)))
                             else:
-                                tree.append(normalize_string(f"{pass_by}{intersection} {name}", max_w, emoji_safe=not(safe_emoji)))
+                                tree.append(normalize_string_with_suffix(f"{pass_by}{intersection} {name}", mention_count, max_w, emoji_safe=not(safe_emoji)))
                             if channel_threads:
                                 code = 500
                             else:
@@ -2663,19 +2711,22 @@ def generate_tree(dms, guilds, threads, unseen, mentioned, guild_folders, activi
                                 name = thread["name"]
                                 thread_id = thread["id"]
                                 active = (thread_id == active_channel_id)
+                                ch_read_state = read_state.get(thread_id)
+                                unseen = is_unseen(ch_read_state)
+                                mentioned = unseen and ch_read_state["mentions"]
                                 if safe_emoji:
                                     name = replace_emoji_string(emoji.demojize(name))
                                 tree.append(f"{pass_by}{pass_by}{intersection_thread} {name}")
                                 code = 400
                                 if (thread["muted"] or not joined) and not active:
                                     code += 10
-                                elif thread_id == active_channel_id and thread_id in mentioned:
+                                elif active and mentioned:
                                     code += 50
                                 elif active:
                                     code += 40
-                                elif thread_id in mentioned:
+                                elif mentioned:
                                     code += 20
-                                elif thread_id in unseen:
+                                elif unseen:
                                     code += 30
                                 tree_format.append(code)
                                 tree_metadata.append({
@@ -2697,7 +2748,8 @@ def generate_tree(dms, guilds, threads, unseen, mentioned, guild_folders, activi
                     name = category["name"]
                     if safe_emoji:
                         name = replace_emoji_string(emoji.demojize(name))
-                    tree.append(normalize_string(f"{intersection} {name}", max_w, emoji_safe=not(safe_emoji)))
+                    mention_count = generate_count(category["ping"])
+                    tree.append(normalize_string_with_suffix(f"{intersection} {name}", mention_count, max_w, emoji_safe=not(safe_emoji)))
                     code = 300
                     if muted and not category["active"]:
                         code += 10

@@ -76,10 +76,7 @@ def main(args):
     os.environ["ESCDELAY"] = "25"   # 25ms
     if os.environ.get("TERM", "") in ("xterm", "linux"):
         os.environ["TERM"] = "xterm-256color"
-    if sys.platform == "linux":
-        cert_path = "/etc/ssl/certs/ca-certificates.crt"
-        if os.path.exists(cert_path):
-            os.environ["SSL_CERT_FILE"] = cert_path
+    peripherals.ensure_ssl_certificates()
 
     if args.colors:
         # import here for faster startup

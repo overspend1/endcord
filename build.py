@@ -443,6 +443,7 @@ def build_with_pyinstaller(onedir, nosoundcard):
         hidden_imports += ["--hidden-import=win32timezone"]
     elif sys.platform == "darwin":
         options = []
+        package_data += ["--collect-data=certifi"]
 
     # prepare command and run it
     cmd = [
@@ -534,6 +535,7 @@ def build_with_nuitka(onedir, clang, mingw, nosoundcard, experimental=False):
             f"--macos-app-version={get_version_number()}",
             "--macos-app-protected-resource=NSMicrophoneUsageDescription:Microphone access for recording voice message.",
         ]
+        package_data += ["--include-package-data=certifi:cacerts.pem"]
 
     # prepare command and run it
     cmd = [

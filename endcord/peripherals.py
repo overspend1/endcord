@@ -189,6 +189,22 @@ def ensure_terminal():
     sys.exit(0)
 
 
+def ensure_ssl_certificates():
+    """Ensure that there are ssl certificates available to http.client module"""
+    if not ("__compiled__" in globals() or getattr(sys, "frozen", False)):   # skip if running from source
+        return
+    if sys.platform == "linux":
+        cert_path = "/etc/ssl/certs/ca-certificates.crt"
+        if os.path.exists(cert_path):
+            os.environ["SSL_CERT_FILE"] = cert_path
+        elif importlib.util.find_spec("certifi") is not None:
+            import certifi
+            os.environ["SSL_CERT_FILE"] = certifi.where()
+    elif sys.platform == "darwin" and importlib.util.find_spec("certifi") is not None:
+        import certifi
+        os.environ["SSL_CERT_FILE"] = certifi.where()
+
+
 def save_config(path, data, section):
     """Save config section"""
     path = os.path.expanduser(path)
