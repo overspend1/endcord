@@ -584,7 +584,7 @@ def copy_to_clipboard(text):
         else:
             try:
                 proc = subprocess.Popen(
-                    ["xclip"],
+                    ["xclip", "-selection", "clipboard"],
                     stdin=subprocess.PIPE,
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.DEVNULL,
