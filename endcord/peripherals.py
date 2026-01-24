@@ -632,18 +632,19 @@ def paste_clipboard_files(save_path=None):
             types_list = proc.communicate()[0].decode().split("\n")
 
             # binary image
-            if types_list[0].startswith("image/"):
-                if not save_path:
-                    return []
-                file_path = os.path.join(save_path, f"clipboard_image_{int(time.time())}." + types_list[0][6:])
-                with open(file_path, "wb") as f:
-                    proc = subprocess.run(
-                        query_command[:] + [types_list[0]] + ([suffix] if suffix else []),
-                        stdout=f,
-                        stderr=subprocess.DEVNULL,
-                        check=False,
-                    )
-                return [file_path]
+            for data_type in types_list:
+                if data_type.startswith("image/"):
+                    if not save_path:
+                        return []
+                    file_path = os.path.join(save_path, f"clipboard_image_{int(time.time())}." + types_list[0][6:])
+                    with open(file_path, "wb") as f:
+                        proc = subprocess.run(
+                            query_command[:] + [types_list[0]] + ([suffix] if suffix else []),
+                            stdout=f,
+                            stderr=subprocess.DEVNULL,
+                            check=False,
+                        )
+                    return [file_path]
 
             # file path
             if "text/uri-list" in types_list:

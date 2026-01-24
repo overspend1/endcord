@@ -222,11 +222,12 @@ def find_detectable_apps_file(directory):
     pattern = os.path.expanduser(os.path.join(directory, "detectable_apps_*.ndjson"))
     matches = glob.glob(pattern)
     if not matches:
-        return None, None
+        return None, None, 0
     path = matches[0]
-    filename = os.path.basename(path)
-    etag = filename[len("detectable_apps_"):-7]
-    return path, etag
+    filename_parts = os.path.basename(path)[:-7].split("_")
+    etag = filename_parts[2]
+    save_time = int(filename_parts[3]) * 1000 if len(filename_parts) >= 4 else 0
+    return path, etag, save_time
 
 
 def find_app(proc_path, list_path, my_platform):
@@ -264,7 +265,7 @@ def find_app(proc_path, list_path, my_platform):
 class GameDetection:
     """Main game detection class"""
 
-    def __init__(self, app, discord, blacklist):
+    def __init__(self, app, discord, blacklist, download_delay=7):
         self.app = app
         self.discord = discord
         self.run = True
@@ -272,6 +273,7 @@ class GameDetection:
         self.cache = []
         self.activities = []
         self.blacklist = blacklist
+        self.download_delay = download_delay * 86400
         threading.Thread(target=self.main, daemon=True, args=()).start()
 
 
@@ -295,17 +297,20 @@ class GameDetection:
             logger.warning(f"Game detection service cannot be started on this platform: {sys.platform}")
             return
 
-        # download new detectable apps list if resource changed on the server
-        old_path, old_etag = find_detectable_apps_file(peripherals.config_path)
-        path, etag = self.discord.get_detectable_apps(peripherals.config_path, old_etag)
-        if not path:
-            logger.info("Could not start game detection service: failed to download detectable applications list")
-            return
-        if old_etag != etag:
-            logger.info(f'Downloaded new detectable applications list with ETag: W/"{etag}"')
-            if old_path:
-                os.remove(old_path)
-        del (old_path, old_etag)
+        # download new detectable apps list if N days passed and resource changed on the server
+        old_path, old_etag, save_time = find_detectable_apps_file(peripherals.config_path)
+        if self.download_delay == 0 or time.time() - save_time > self.download_delay:
+            path, etag = self.discord.get_detectable_apps(peripherals.config_path, old_etag)
+            if not path:
+                logger.info("Could not start game detection service: failed to download detectable applications list")
+                return
+            if old_etag != etag:
+                logger.info(f'Downloaded new detectable applications list with ETag: W/"{etag}"')
+                if old_path:
+                    os.remove(old_path)
+            del (old_path, old_etag)
+        else:
+            path = old_path
 
         # load cached processes and remove outdated
         self.cache = peripherals.load_json("detected_apps_cache.json", {})   # {proc_path: [app_id, app_name, app_path, last_seen]...}

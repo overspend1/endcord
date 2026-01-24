@@ -18,7 +18,7 @@ A clear and concise description of what the bug is.
  - OS: [e.g. Arch 6.12.7]
  - Terminal: [e.g. Alacritty]
  - Version [e.g. 1.0.0 full/lite]
- - Install method: [e.g. downloaded binary / custom build / from AUR]
+ - Install method: [e.g. downloaded binary / custom build (nuitka?) / from AUR (-git?)]
 
 **Steps to reproduce**
 Steps to reproduce the behavior:

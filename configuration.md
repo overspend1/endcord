@@ -124,6 +124,8 @@ Note: always put string in `""`. To use `"` inside the string escape it like thi
     Cutoff for assist match score. Lower value will result in more results.
 - `limit_command_history = 50`  
     Maximum number of commands stored in history. File is `command_history.json` in config dir.
+- `game_detection_download_delay = 7`  
+    How often detectable games list will be checked for updates. Value is in days. Set to 0 to check on each run.
 - `external_editor = None`  
     Command or path to executable for launching external editor. Set to `None` to use system default.
 - `calls = True`  

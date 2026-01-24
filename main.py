@@ -117,6 +117,8 @@ def main(args):
         config["proxy"] = args.proxy
     if args.host:
         config["custom_host"] = args.host
+    if args.debug or config["debug"]:
+        logging.getLogger().setLevel(logging.DEBUG)
 
     from endcord import profile_manager
     logger.info(f"Started endcord {VERSION}")
@@ -129,14 +131,12 @@ def main(args):
             selected = args.profile
         else:
             selected = None
-        profiles, selected, proceed = profile_manager.manage(profiles_path, selected, force_open=args.manager)
+        profiles, selected, proceed = profile_manager.manage(profiles_path, selected, config, force_open=args.manager)
         if not profiles:
             sys.exit("Token not provided in profile manager nor as argument")
     if not proceed:
         sys.exit(0)
 
-    if args.debug or config["debug"]:
-        logging.getLogger().setLevel(logging.DEBUG)
     try:
         from endcord import app
         curses.wrapper(app.Endcord, config, keybindings, command_bindings, profiles, VERSION)

@@ -12,10 +12,13 @@ dependencies = [
     "orjson>=3.11.5",
     "pexpect>=4.9.0",
     "psutil>=7.2.1; sys_platform != 'linux'",
+    "pycryptodome>=3.23.0",
+    "pynacl>=1.6.2",
     "pysocks>=1.7.1",
     "python-socks>=2.8.0",
     "pywin32>=311; sys_platform == 'win32'",
     "pywin32-ctypes>=0.2.3; sys_platform == 'win32'",
+    "qrcode>=8.2",
     "soundcard>=0.4.5",
     "soundfile>=0.13.1",
     "urllib3>=2.6.3",
@@ -27,7 +30,7 @@ dependencies = [
 [dependency-groups]
 build = [
     "cython>=3.2.4",
-    "nuitka>=2.8.9",
+    "nuitka>=2.8.10",
     "pyinstaller>=6.18.0",
     "setuptools>=80.9.0",
 ]

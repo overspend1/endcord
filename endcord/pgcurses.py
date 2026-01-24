@@ -615,9 +615,13 @@ class Window:
                 font_regular.render_to(screen, (px_x + self.pxx, px_y + self.pxy), ch, fg_color, bg_color)
 
 
-    def nodelay(self, flag: bool):
+    def nodelay(self, flag):
         """curses.nodelay clone using pygame"""
         self.nodelay_state = flag
+
+
+    def timeout(self, value):
+        """curses.delay clone using pygame, does nothing"""
 
 
     def do_key_press(self, event):

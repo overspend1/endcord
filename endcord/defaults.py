@@ -52,6 +52,7 @@ settings = {
     "assist_limit": 50,
     "assist_score_cutoff": 15,
     "limit_command_history": 50,
+    "game_detection_download_delay": 7,
     "linux_notification_sound": "message",
     "custom_notification_sound": None,
     "linux_ringtone_incoming": "phone-incoming-call",

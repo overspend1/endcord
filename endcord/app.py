@@ -132,6 +132,7 @@ class Endcord:
         self.emoji_as_text = config["emoji_as_text"]
         self.show_pending_messages = config["show_pending_messages"]
         self.enable_calls = config["calls"]
+        self.game_detection_download_delay = config["game_detection_download_delay"]
 
         if not self.external_editor or not shutil.which(self.external_editor):
             self.external_editor = os.environ.get("EDITOR", "nano")
@@ -1374,6 +1375,8 @@ class Endcord:
                             input_index = self.input_store.pop(num)["index"]
                             break
                 if restore_text:
+                    self.tui.update_prompt(self.prompt)
+                    self.tui.input_buffer = restore_text
                     self.tui.set_input_index(input_index)
                     input_text, chat_sel, tree_sel, action = self.tui.wait_input(self.prompt, init_text=restore_text, keep_cursor=True, reset=False, clear_delta=True, forum=self.forum)
                 else:
@@ -1708,10 +1711,11 @@ class Endcord:
                                 self.tui.instant_assist = True
                             else:
                                 self.restore_input_text = (new_input_text, "standard")
+                            self.tui.input_buffer = new_input_text
                             self.tui.set_input_index(new_input_index)
                 elif self.member_list_visible:   # controls for member list when no extra window
                     mlist_selected = self.tui.get_mlist_selected()
-                    if mlist_selected >= len(self.member_list):
+                    if mlist_selected == -1 or mlist_selected >= len(self.member_list):
                         continue
                     member = self.member_list[mlist_selected]
                     if "id" in member:
@@ -1927,6 +1931,7 @@ class Endcord:
                     with open(temp_message_path, "r", encoding="utf-8") as f:
                         new_text = f.read().strip("\n").replace("\t", " " * self.config["tab_spaces"])
                     os.remove(temp_message_path)
+                    self.tui.input_buffer = new_text
                     self.tui.set_input_index(len(new_text))
                     self.restore_input_text = (new_text, "standard")
                 else:
@@ -2182,6 +2187,7 @@ class Endcord:
                             self.ignore_typing = True
                         else:
                             self.restore_input_text = (new_input_text, "standard")
+                        self.tui.input_buffer = new_input_text
                         self.tui.set_input_index(new_input_index)
                     else:
                         self.assist_word = None
@@ -3252,6 +3258,7 @@ class Endcord:
                 with open(temp_message_path, "r", encoding="utf-8") as f:
                     new_text = f.read().strip("\n")
                 os.remove(temp_message_path)
+                self.tui.input_buffer = new_text
                 self.tui.set_input_index(len(new_text))
                 self.add_to_store(self.active_channel["channel_id"], new_text)
             self.tui.resume_curses()
@@ -7031,7 +7038,12 @@ class Endcord:
 
         # start game detection service
         if self.enable_game_detection:
-            self.game_detection = game_detection.GameDetection(self, self.discord, self.state["games_blacklist"])
+            self.game_detection = game_detection.GameDetection(
+                self,
+                self.discord,
+                self.state["games_blacklist"],
+                self.game_detection_download_delay,
+            )
 
         # start extra line remover thread
         threading.Thread(target=self.extra_line_remover, daemon=True).start()

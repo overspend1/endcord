@@ -117,19 +117,26 @@ def get_cython_bins(directory="endcord_cython", startswith=None):
     return bins
 
 
-def find_file_in_venv(lib_name, file_name):
+def find_file_in_venv(lib_name, file_name, silent=False, recurse=False):
     """Search for file in specified library in current venv"""
     if isinstance(file_name, list):
         file_name = os.path.join(*file_name)
     for root, dirs, files in os.walk(".venv"):
         if lib_name in dirs:
             lib_dir = os.path.join(root, lib_name)
-            path = os.path.join(lib_dir, file_name)
-            if os.path.isfile(path):
-                return path
-    else:
+            if not recurse:
+                path = os.path.join(lib_dir, file_name)
+                if os.path.isfile(path):
+                    return path
+            else:
+                for sub_root, sub_dirs, sub_files in os.walk(lib_dir):
+                    path = os.path.join(sub_root, file_name)
+                    if os.path.isfile(path):
+                        return path
+            break
+    if not silent:
         print(f"{lib_name}/{file_name} not found")
-        return
+    return None
 
 
 def patch_soundcard():
@@ -238,6 +245,20 @@ def clean_emoji():
 
     if not changed:
         print("Emoji data is already cleaned")
+
+
+def clean_qrcode():
+    """Clean qrcode library from unused code to reduce binary size"""
+    blacklist = ["console_scripts.py", "release.py", "styledpil.py", "svg.py", "pil.py", "tests"]
+    for file in blacklist:
+        path = True
+        path = find_file_in_venv("qrcode", file, silent=True, recurse=True)
+        while path:
+            try:
+                os.remove(path)
+            except Exception:
+                break
+            path = find_file_in_venv("qrcode", file, silent=True, recurse=True)
 
 
 def toggle_experimental(check_only=False):
@@ -488,6 +509,7 @@ def build_with_nuitka(onedir, clang, mingw, nosoundcard, experimental=False):
     build_numpy_lite(clang)
     patch_soundcard()
     clean_emoji()
+    clean_qrcode()
 
     mode = "--standalone" if onedir else "--onefile"
     compiler = ""
@@ -496,7 +518,10 @@ def build_with_nuitka(onedir, clang, mingw, nosoundcard, experimental=False):
     elif mingw:
         compiler = "--mingw64"
     python_flags = ["--python-flag=-OO"]
-    hidden_imports = ["--include-module=uuid"]
+    hidden_imports = [
+        "--include-module=uuid",
+        "--include-module=av.sidedata.encparams",
+    ]
     # excluding zstandard because its nuitka dependency bu also urllib3 optional dependency, and uses lots of space
     exclude_imports = [
         "--nofollow-import-to=cython",

@@ -104,3 +104,34 @@ def read_key():
 
     finally:
         fcntl.fcntl(fd, fcntl.F_SETFL, old_flags)
+
+
+run_esc_detector = False
+
+def esc_detector():
+    """A function to be ran in a thread that waits for esc key then exits"""
+    global run_esc_detector
+    run_esc_detector = True
+    fd = sys.stdin.fileno()
+    old_flags = fcntl.fcntl(fd, fcntl.F_GETFL)
+    try:
+        fcntl.fcntl(fd, fcntl.F_SETFL, old_flags | os.O_NONBLOCK)
+        while run_esc_detector:
+            try:
+                byte = os.read(fd, 1)
+                if not byte:
+                    time.sleep(0.01)
+                elif byte == b"\x1b":
+                    run_esc_detector = False
+                else:
+                    time.sleep(0.01)
+            except BlockingIOError:
+                time.sleep(0.01)
+    finally:
+        fcntl.fcntl(fd, fcntl.F_SETFL, old_flags)
+
+
+def stop_esc_detector():
+    """Stop esc detector thread"""
+    global run_esc_detector
+    run_esc_detector = False

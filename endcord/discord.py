@@ -44,6 +44,29 @@ def ceil(x):
     return -int(-1 * x // 1)
 
 
+def log_api_error(response, function_name):
+    """Add api response error to log"""
+    text = f"{function_name}: Response code {response.status}"
+    data = response.read()
+    if data:
+        try:
+            data = json.loads(data)
+            error_message = data.get("message")
+            error_code = data.get("code")
+            if "captcha_key" in data:
+                error_message = data.get("captcha_key")
+        except json.JSONDecodeError:
+            error_code = "None"
+            error_message = data.decode("utf-8").strip()
+    else:
+        error_code = error_message = None
+    if error_code:
+        text += f"; Error code: {error_code}"
+    if error_message:
+        text += f" - {error_message}"
+    logger.warning(text)
+
+
 def get_sticker_url(sticker):
     """Generate sticker download url from its type and id, lottie stickers will return None"""
     sticker_type = sticker["format_type"]
@@ -193,7 +216,7 @@ class Discord():
         if response.status in (400, 401):   # bad request or unauthorized
             logger.error("unauthorized access. Probably invalid token. Exiting...")
             raise SystemExit("unauthorized access. Probably invalid token. Exiting...")
-        logger.error(f"Failed to get my id. Response code: {response.status}")
+        log_api_error(response, "get_my_id")
         connection.close()
         return False
 
@@ -246,7 +269,7 @@ class Discord():
                 "extra": extra_data,
                 "roles": None,
             }
-        logger.error(f"Failed to fetch user data. Response code: {response.status}")
+        log_api_error(response, "get_user")
         connection.close()
         return False
 
@@ -302,7 +325,7 @@ class Discord():
                 "bot": data["user"].get("bot"),
                 "roles": roles,
             }
-        logger.error(f"Failed to fetch user data. Response code: {response.status}")
+        log_api_error(response, "get_user_guild")
         connection.close()
         return False
 
@@ -349,7 +372,7 @@ class Discord():
                 })
                 dms_id.append(dm["id"])
             return dms, dms_id
-        logger.error(f"Failed to fetch dm list. Response code: {response.status}")
+        log_api_error(response, "get_dms")
         connection.close()
         return [], []
 
@@ -388,7 +411,7 @@ class Discord():
                     "position": channel["position"],
                 })
             return channels
-        logger.error(f"Failed to fetch guild channels. Response code: {response.status}")
+        log_api_error(response, "get_channels")
         connection.close()
         return []
 
@@ -417,7 +440,7 @@ class Discord():
             # from endcord import debug
             # debug.save_json(data, "messages.json", False)
             return prepare_messages(data)
-        logger.error(f"Failed to fetch messages. Response code: {response.status}")
+        log_api_error(response, "get_messages")
         connection.close()
         return []
 
@@ -445,7 +468,7 @@ class Discord():
                     "global_name": user["global_name"],
                 })
             return reaction
-        logger.error(f"Failed to fetch reaction details: {reaction}. Response code: {response.status}")
+        log_api_error(response, "get_reactions")
         connection.close()
         return []
 
@@ -480,7 +503,7 @@ class Discord():
                     "global_name": mention["author"].get("global_name"),   # spacebar_fix - get
                 })
             return mentions
-        logger.error(f"Failed to fetch mentions. Response code: {response.status}")
+        log_api_error(response, "get_mentions")
         connection.close()
         return []
 
@@ -515,7 +538,7 @@ class Discord():
                 })
             del (data, pack_stickers)
             return self.stickers
-        logger.error(f"Failed to fetch stickers. Response code: {response.status}")
+        log_api_error(response, "get_stickers")
         connection.close()
         return []
 
@@ -548,7 +571,7 @@ class Discord():
                 return {}
             self.protos[num-1] = MessageToDict(decoded)
             return self.protos[num-1]
-        logger.error(f"Failed to fetch settings. Response code: {response.status}")
+        log_api_error(response, "get_settings_proto")
         connection.close()
         return False
 
@@ -580,7 +603,7 @@ class Discord():
         if response.status == 200:
             connection.close()
             return True
-        logger.error(f"Failed to patch protobuf {num}. Response code: {response.status}")
+        log_api_error(response, "patch_settings_proto")
         connection.close()
         return False
 
@@ -599,7 +622,7 @@ class Discord():
         if response.status == 200:
             connection.close()
             return True
-        logger.error(f"Failed to patch user setting {setting}. Response code: {response.status}")
+        log_api_error(response, "patch_settings_old")
         connection.close()
         return False
 
@@ -623,7 +646,7 @@ class Discord():
                 "name": data["name"],
                 "description": data["description"],
             }
-        logger.error(f"Failed to fetch application rpc data. Response code: {response.status}")
+        log_api_error(response, "get_rpc_app")
         connection.close()
         return False
 
@@ -649,7 +672,7 @@ class Discord():
                     "name": asset["name"],
                 })
             return assets
-        logger.error(f"Failed to fetch application assets. Response code: {response.status}")
+        log_api_error(response, "get_rpc_app_assets")
         connection.close()
         return False
 
@@ -673,9 +696,9 @@ class Discord():
             data = json.loads(response.read())
             connection.close()
             retry_after = float(data["retry_after"])
-            logger.error(f"Failed to fetch application external assets. Response code: 429 - Retry after: {retry_after}")
+            logger.error(f"get_rpc_app_external: Response code 429 - Retry after: {retry_after}")
             return retry_after
-        logger.error(f"Failed to fetch application external assets. Response code: {response.status}")
+        log_api_error(response, "get_rpc_app_external")
         connection.close()
         return False
 
@@ -780,7 +803,7 @@ class Discord():
                 "reactions": [],
                 "stickers": data.get("sticker_items", []),
             }
-        logger.error(f"Failed to send message. Response code: {response.status}")
+        log_api_error(response, "send_message")
         connection.close()
         return False
 
@@ -818,7 +841,7 @@ class Discord():
                 "stickers": data.get("sticker_items", []),
             }
 
-        logger.error(f"Failed to edit the message. Response code: {response.status}")
+        log_api_error(response, "send_update_message")
         connection.close()
         return False
 
@@ -837,7 +860,7 @@ class Discord():
         if response.status == 204:
             connection.close()
             return True
-        logger.error(f"Failed to delete the message. Response code: {response.status}")
+        log_api_error(response, "send_delete_message")
         connection.close()
         return False
 
@@ -865,7 +888,7 @@ class Discord():
         if response.status == 200:
             connection.close()
             return True
-        logger.error(f"Failed to set the message as seen. Response code: {response.status}")
+        log_api_error(response, "send_ack")
         connection.close()
         return False
 
@@ -890,7 +913,7 @@ class Discord():
         if response.status == 204:
             connection.close()
             return True
-        logger.error(f"Failed to send bulk message ack. Response code: {response.status}")
+        log_api_error(response, "send_ack_bulk")
         connection.close()
         return False
 
@@ -913,7 +936,7 @@ class Discord():
             data = json.loads(response.read())
             connection.close()
             return int(data["message_send_cooldown_ms"] / 1000)
-        logger.error(f"Failed to set typing. Response code: {response.status}")
+        log_api_error(response, "send_typing")
         connection.close()
         return False
 
@@ -933,7 +956,7 @@ class Discord():
         if response.status == 204:
             connection.close()
             return True
-        logger.error(f"Failed to send reaction: {reaction}. Response code: {response.status}")
+        log_api_error(response, "send_reaction")
         connection.close()
         return False
 
@@ -953,7 +976,7 @@ class Discord():
         if response.status == 204:
             connection.close()
             return True
-        logger.error(f"Failed to delete reaction: {reaction}. Response code: {response.status}")
+        log_api_error(response, "remove_reaction")
         connection.close()
         return False
 
@@ -987,7 +1010,7 @@ class Discord():
         if response.status == 200:
             connection.close()
             return True
-        logger.error(f"Failed to set guild mute config. Response code: {response.status}")
+        log_api_error(response, "send_mute_guild")
         connection.close()
         return False
 
@@ -1027,7 +1050,7 @@ class Discord():
         if response.status == 200:
             connection.close()
             return True
-        logger.error(f"Failed to set guild mute config. Response code: {response.status}")
+        log_api_error(response, "send_mute_channel")
         connection.close()
         return False
 
@@ -1061,7 +1084,7 @@ class Discord():
         if response.status == 200:
             connection.close()
             return True
-        logger.error(f"Failed to set DM mute config. Response code: {response.status}")
+        log_api_error(response, "send_mute_dm")
         connection.close()
         return False
 
@@ -1099,7 +1122,7 @@ class Discord():
             if response.status == 200:
                 connection.close()
                 return True
-            logger.error(f"Failed to set guild mute config. Response code: {response.status}")
+            log_api_error(response, "send_notification_setting_guild")
             connection.close()
         return False
 
@@ -1142,7 +1165,7 @@ class Discord():
         if response.status == 200:
             connection.close()
             return True
-        logger.error(f"Failed to set guild mute config. Response code: {response.status}")
+        log_api_error(response, "send_notification_setting_channel")
         connection.close()
 
 
@@ -1193,7 +1216,7 @@ class Discord():
                         "threads": threads,
                     })
             return total, threads
-        logger.error(f"Failed to perform a thread search. Response code: {response.status}")
+        log_api_error(response, "get_threads")
         connection.close()
         return 0, []
 
@@ -1213,7 +1236,7 @@ class Discord():
         if response.status == 204:
             connection.close()
             return True
-        logger.error(f"Failed to join a thread. Response code: {response.status}")
+        log_api_error(response, "join_thread")
         connection.close()
         return False
 
@@ -1233,7 +1256,7 @@ class Discord():
         if response.status == 204:
             connection.close()
             return True
-        logger.error(f"Failed to leave a thread. Response code: {response.status}")
+        log_api_error(response, "leave_thread")
         connection.close()
         return False
 
@@ -1284,7 +1307,7 @@ class Discord():
             for message in data["messages"]:
                 messages.append(message[0])
             return total, prepare_messages(messages, have_channel_id=True)
-        logger.error(f"Failed to perform a message search. Response code: {response.status}")
+        log_api_error(response, "search")
         connection.close()
         return 0, []
 
@@ -1340,7 +1363,7 @@ class Discord():
             self.my_commands = commands
             self.my_apps = apps
             return commands, apps
-        logger.error(f"Failed to fetch my application commands. Response code: {response.status}")
+        log_api_error(response, "get_my_commands")
         connection.close()
         return [], []
 
@@ -1401,7 +1424,7 @@ class Discord():
                 "apps": apps,
             })
             return commands, apps
-        logger.error(f"Failed to fetch guild application commands. Response code: {response.status}")
+        log_api_error(response, "get_guild_commands")
         connection.close()
         return [], []
 
@@ -1447,7 +1470,7 @@ class Discord():
         if response.status == 204:
             connection.close()
             return True
-        logger.error(f"Failed to send app interaction. Response code: {response.status}")
+        log_api_error(response, "send_interaction")
         connection.close()
         return False
 
@@ -1469,7 +1492,7 @@ class Discord():
         if response.status == 204:
             connection.close()
             return True
-        logger.error(f"Failed to send poll vote. Response code: {response.status}")
+        log_api_error(response, "send_vote")
         connection.close()
         return False
 
@@ -1493,7 +1516,7 @@ class Discord():
         if response.status == 204:
             connection.close()
             return True
-        logger.error(f"Failed block/ignore user. Response code: {response.status}")
+        log_api_error(response, "block_user")
         connection.close()
         return False
 
@@ -1514,7 +1537,7 @@ class Discord():
         if response.status == 204:
             connection.close()
             return True
-        logger.error(f"Failed to unblock user. Response code: {response.status}")
+        log_api_error(response, "unblock_user")
         connection.close()
         return False
 
@@ -1534,7 +1557,7 @@ class Discord():
             data = json.loads(response.read())
             connection.close()
             return prepare_messages(data, have_channel_id=True)
-        logger.error(f"Failed to get pinned messages. Response code: {response.status}")
+        log_api_error(response, "get_pinned")
         connection.close()
         return False
 
@@ -1553,7 +1576,7 @@ class Discord():
         if response.status == 204:
             connection.close()
             return True
-        logger.error(f"Failed to pin a message: Response code: {response.status}")
+        log_api_error(response, "send_pin")
         connection.close()
         return False
 
@@ -1581,7 +1604,7 @@ class Discord():
                     "gif": gif["gif_src"],
                 })
             return gifs
-        logger.error(f"Failed to perform a gif search. Response code: {response.status}")
+        log_api_error(response, "search_gifs")
         connection.close()
         return []
 
@@ -1624,7 +1647,7 @@ class Discord():
             logger.warning("Failed to get attachment upload link: 413 - File too large.")
             connection.close()
             return None, 2   # file too large
-        logger.error(f"Failed to get attachment upload link. Response code: {response.status}")
+        log_api_error(response, "request_attachment_url")
         connection.close()
         return None, 1
 
@@ -1661,7 +1684,7 @@ class Discord():
                 connection.close()
                 return True
             # discord client is also performing OPTIONS request, idk why, not needed here
-            logger.error(f"Failed to upload attachment. Response code: {response.status}")
+            log_api_error(response, "upload_attachment")
             connection.close()
             return False
 
@@ -1705,7 +1728,7 @@ class Discord():
             logger.debug("Failed to delete attachment. Response code: 429 - Too Many Requests")
             connection.close()
             return True
-        logger.error(f"Failed to delete attachment. Response code: {response.status}")
+        log_api_error(response, "cancel_attachment")
         connection.close()
         return False
 
@@ -1726,7 +1749,7 @@ class Discord():
             connection.close()
             if data["refreshed_urls"]:
                 return data["refreshed_urls"][0]["refreshed"]
-        logger.error(f"Failed to refresh attachment URL. Response code: {response.status}")
+        log_api_error(response, "refresh_attachment_url")
         connection.close()
         return False
 
@@ -1787,7 +1810,7 @@ class Discord():
         if response.status == 200:
             connection.close()
             return True
-        logger.error(f"Failed to send voice message. Response code: {response.status}")
+        log_api_error(response, "send_voice_message")
         connection.close()
         return False
 
@@ -1832,7 +1855,7 @@ class Discord():
         if response.status == 204:
             connection.close()
             return True
-        logger.error(f"Failed to ring private channel recipients. Response code: {response.status}")
+        log_api_error(response, "send_ring")
         connection.close()
         return False
 
@@ -1863,7 +1886,7 @@ class Discord():
                 f.write(response.read())
             connection.close()
             return destination
-        logger.error(f"Failed to download pfp. Response code: {response.status}")
+        log_api_error(response, "get_pfp")
         connection.close()
         return False
 
@@ -1896,7 +1919,7 @@ class Discord():
                 f.write(response.read())
             connection.close()
             return destination
-        logger.error(f"Failed to download emoji. Response code: {response.status}")
+        log_api_error(response, "get_emoji")
         connection.close()
         return False
 
@@ -1927,7 +1950,7 @@ class Discord():
             if data["code"]:
                 return f"https://{self.host}/invite/{data["code"]}"
             return None
-        logger.error(f"Failed to generate invite url. Response code: {response.status}")
+        log_api_error(response, "get_invite_url")
         connection.close()
         return False
 
@@ -1947,7 +1970,7 @@ class Discord():
             data = json.loads(response.read())
             connection.close()
             return data["account_standing"]["state"]
-        logger.error(f"Failed to fetch account standing. Response code: {response.status}")
+        log_api_error(response, "get_my_standing")
         connection.close()
         return False
 
@@ -1976,7 +1999,7 @@ class Discord():
             self.activity_token = json.loads(response.read())["token"]
             connection.close()
             return self.activity_token
-        logger.error(f"Failed to update activity session. Response code: {response.status}")
+        log_api_error(response, "send_update_activity_session")
         connection.close()
         return False
 
@@ -2010,7 +2033,7 @@ class Discord():
                 regions.insert(0, optimal)
             self.voice_regions = regions
             return regions
-        logger.error(f"Failed to fetch voice regions. Response code: {response.status}")
+        log_api_error(response, "get_voice_regions")
         connection.close()
         return False
 
@@ -2038,7 +2061,7 @@ class Discord():
                 regions.append(region["region"])
             self.ranked_voice_regions = regions
             return self.ranked_voice_regions
-        logger.error(f"Failed to fetch ranked voice regions. Response code: {response.status}")
+        log_api_error(response, "get_best_voice_region")
         connection.close()
         return self.ranked_voice_regions
 
@@ -2047,6 +2070,7 @@ class Discord():
         """
         Get and save list (as ndjson) of detectable applications, containing all detectable games.
         Use etag to skip downloading same cached resource.
+        File is saved in format: detectable_apps_{etag}_{current_time}.ndjson, where current_time is unix_time/1000
         """
         message_data = None
         url = "/api/v9/applications/detectable"
@@ -2063,8 +2087,9 @@ class Discord():
             return None, etag
         json_array_objects = peripherals.json_array_objects   # to skip name lookup
         if response.status == 200:
+            current_time = int(time.time()/1000)
             etag = response.getheader("ETag")[3:-1]
-            save_path = os.path.expanduser(os.path.join(save_dir, f"detectable_apps_{etag}.ndjson"))
+            save_path = os.path.expanduser(os.path.join(save_dir, f"detectable_apps_{etag}_{current_time}.ndjson"))
             using_orjson = json.__name__ == "orjson"
             if using_orjson:
                 nl = b"\n"
@@ -2091,7 +2116,8 @@ class Discord():
                     return None, etag
                 return save_path, etag
         elif response.status == 304:   # not modified
-            save_path = os.path.expanduser(os.path.join(save_dir, f"detectable_apps_{etag}.ndjson"))
+            save_path = os.path.expanduser(os.path.join(save_dir, f"detectable_apps_{etag}_{current_time}.ndjson"))
             return save_path, etag
+        log_api_error(response, "get_detectable_apps")
         connection.close()
         return None, etag

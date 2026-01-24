@@ -15,7 +15,6 @@
 
 Endcord is a third-party feature rich Discord client, running entirely in terminal.  
 It is built with python and ncurses library, to deliver lightweight yet feature rich experience.  
-Discord token is required in order to run endcord! see [Token](#token).  
 [More screenshots](https://github.com/sparklost/endcord/blob/main/.github/screenshots.md).  
 
 
@@ -25,6 +24,7 @@ Discord token is required in order to run endcord! see [Token](#token).
 - Voice calls (WIP)
 - Integrated RPC (only Rich Presence) and game detection
 - Mouse controls
+- Login with email, 2fa, QR code, or paste token
 - Desktop notifications
 - View images, gifs, videos, audio, stickers and YouTube with ASCII art or in external app
 - Download/upload attachments
@@ -102,9 +102,9 @@ There can be missing entries in config, they will be filled with defaults.
 Go to [configuration](configuration.md).
 
 ### Profile manager
-Profile manager is used for easier switching between multiple accounts.  
-It allows creating, editing, deleting and loading token for different accounts.  
-Each token is saved as "profile", it has custom "name" as identifier, and last date of usage is also stored.  
+Profile manager is used for login and easier switching between multiple accounts.  
+It allows logging in with standard email and password, 2fa, QR code, or to paste token.  
+Each account is saved as "profile", it has custom "name" as identifier, and last date of usage is also stored.  
 Profiles can be saved either in keyring or as plaintext json.  
 Keyring is OS managed secure storage for secrets (like passwords and tokens) - recommended.  
 Plaintext means that tokens will be saved non-encrypted in `profiles.json` file in endcord settings directory.  
@@ -114,15 +114,14 @@ Profile manager will always automatically load last used profile.
 Unless other profile is selected in manager TUI, or profile name is provided with `--profile` flag.  
 Manager can be re-opened using `--manager` flag.  
 
-### Token
-Token is used to access Discord through your account without logging-in.  
-It is required to use endcord.  
-See [FAQ](#FAQ) for more info on obtaining your Discord token.  
-After obtaining token, you can either:  
-- Provide token in profile manager - recommended,
-- Pass token to endcord as command argument: `endcord -t [YOUR_TOKEN]`.  
-Note that if you use it as argument, it might get saved in your terminal history file.  
-**Do not share your token!** Remove it form config before sharing it.  
+### Logging in
+- Email/phone number and password - credentials are used only while logging in and will never be kept in storage
+- Scan QR code - note that some terminals may fail to render QR code
+- Token - used to access Discord through your account without logging-in
+- Token as an argument: `endcord -t [YOUR_TOKEN]`, but note that it might get saved in your terminal history file
+Email or QR code login may fail because captcha is requested by Discord. In that case first login and complete captcha through official client, from same IP address, then try again. If it still fails, then youll have to use token method.  
+If you want to verify what is happening with credentials, look in profile_manager.py and auth.py.  
+**Do not share your token!**    
 
 ### Keybinding
 Keybindings are configured in separate sections in `config.ini`.  Main keybindings section is `[keybindings]`.  
@@ -212,6 +211,8 @@ On username - view profile
 On reaction - toggle that reaction  
 On URL - open media / download file / open in browser  
 On spoiler - reveal that spoiler  
+
+On Windows, double click isn't working, instead use triple click.
 
 ### Channel Tree
 If tree object has `>` before the object name, it means it has sub-objects (its drop-down).  
@@ -443,10 +444,11 @@ Third party endcord forks may add features that can lead to account ban, or cont
 To see all build script options, run: `uv run build.py -h`.  
 To build endcord-lite, add `--lite` flag. No voice calls and ascii media, slightly less RAM usage, smaller executable, faster startup.  
 To build into directory, not as a single executable, add `--onedir` flag. Will speed up startup.  
-To build with Nuitka, add `--nuitka` flag. Optimized, smaller executable, long compile time. See [Nuitka](#nuitka) for more info.  
+To build with Nuitka, add `--nuitka` flag. More optimized, smaller executable, long compile time. See [Nuitka](#nuitka) for more info.  
 If compiler is not available, or built binary is failing, try building with `--nocython`, which will produce slightly less optimized binaries.  
 To toggle [experimental windowed mode](#experimental-windowed-mode) run: `uv run build.py --toggle-experimental`.  
 If you want to build without `orjson` (uses rust), run `uv remove orjson` for the first time, before running anything else. This will make it fallback to standard json (more CPU usage by game detection). Optionally it can use `ujson`, run `uv add ujson` to install it.  
+Currently endcord cant be built with nuitka in python >=3.14. Use `uv run -p 3.13 build.py`.  
 
 ### Linux
 1. Clone this repository: `git clone https://github.com/sparklost/endcord.git`
@@ -480,10 +482,9 @@ Nuitka requirements:
 Endcord does work with free-threaded python, and it significantly improves media player performance with large video resolutions, by allowing decoding, video and sound to be played in separate threads, completely removing crackling sound when playing on high "terminal resolution".  
 But currently building does not work in this mode, nuitka [doesn't support free-threaded mode](<https://github.com/Nuitka/Nuitka/issues/3062>) yet.  
 Anyway, to run it from source:  
-First install python with uv: `uv python install 3.14t`, it must be >= 3.14t (because some libraries dont have free-threaded support for < 3.14).  
-Install dependencies: `uv sync --python 3.14t --group media`.  
+Install dependencies: `uv sync -p 3.14t --group media`.  
 Remove orjson (doesn't support freethreaded python): `uv remove orjson`. (ujson also doesn't support freethreaded).  
-Run main.py: `uv run --python 3.14t main.py`.  
+Run main.py: `uv run -p 3.14t main.py`.  
 
 
 ## FAQ

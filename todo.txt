@@ -1,8 +1,10 @@
-Add option to login with email ?
-Add option to login with QR code ?
+Fix media player and qr code on windows
+Add ability to open custom emoji with media player
+Add option to save current tabs to state
+Investigate read state reverting after reconnect
 
 Vim-like bindings
-    have input mode that types in input line
+    have input mode - type in input line
     have normal mode - single keys can be used as bindings and execute commands
     show current mode in bars and prompt
 
@@ -21,6 +23,9 @@ Voice calls
     send speaking event?
 
 after fixing https://github.com/python/cpython/issues/119138
+    Add colors for status sign in selected and active dm in tree
+    Add red fg white bg color for selected and unread in tree
+    Add red fg gray bg color for active and unread in tree
     Show inline media in chat
     Add bg color for mentions and channels in chat
 

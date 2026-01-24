@@ -203,6 +203,7 @@ class TUI():
         curses.mousemask(curses.ALL_MOUSE_EVENTS)
         curses.mouseinterval(0)
         print("\x1b[?2004h")   # enable bracketed paste mode
+        screen.clear()
         self.last_free_id = 1   # last free color pair id
         self.attrib_map = [0]   # has 0 so its index starts from 1 to be matched with color pairs
         tree_bg = config["color_tree_default"][1]
