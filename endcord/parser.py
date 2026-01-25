@@ -852,11 +852,15 @@ def command_string(text):
         cmd_type = 65
 
     # 66 - 666
-    elif text_lower == "666":
+    elif text_lower.startswith("666"):
         cmd_type = 66
 
-    # 66 - TOGGLE_SNOW
-    elif text_lower == "toggle_snow":
+    # 67 - TOGGLE_SNOW
+    elif text_lower.startswith("toggle_snow"):
         cmd_type = 67
+
+    # 68 - REMOVE_ALL_TABS
+    elif text_lower.startswith("remove_all_tabs"):
+        cmd_type = 68
 
     return cmd_type, cmd_args

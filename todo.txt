@@ -1,4 +1,3 @@
-Add option to save current tabs to state
 Add ability to open custom emoji with media player
 Investigate read state reverting after reconnect
 

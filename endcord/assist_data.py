@@ -45,6 +45,7 @@ COMMAND_ASSISTS = (
     ("string_select [string] - select string on interactive app message", "string_select"),
     ("toggle_tab - toggle tabbed (pinned) state of current channel", "toggle_tab"),
     ("switch_tab [num] - switch to specified tab by its number", "switch_tab"),
+    ("remove_all_tabs - remove all tabbed channels", "remove_all_tabs"),
     ("vote [num] - vote for specified answer index on active poll message", "vote"),
     ("paste - paste image or file as attachment or text from clipboard", "paste"),
     ("insert_timestamp YYYY-MM-DD-HH-mm / YYYY-MM-DD / HH:mm / HH:mm:SS - insert discord timestamp", "insert_timestamp"),

@@ -1143,9 +1143,9 @@ class TUI():
                 title_txt_r = title_txt_r[:w - 2*self.bordered]
             if self.title_txt_r:
                 if self.bordered:
-                    title_txt_r = replace_spaces_dash(trim_with_dash(title_txt_r)) + "─" + self.corner_ur
+                    title_txt_r = replace_spaces_dash(trim_with_dash(title_txt_r))
                     title_txt_l = self.corner_ul + replace_spaces_dash(trim_with_dash(self.title_txt_l))
-                    title_txt_r = title_txt_r[: max(w - (len(title_txt_l) + 2), 0)]
+                    title_txt_r = title_txt_r[: max(w - (len(title_txt_l) + 5), 0)] + "─" + self.corner_ur
                     title_txt_l = title_txt_l + "─" * (w - len(title_txt_l) - len(title_txt_r))
                     new_format_l = []
                     for item in self.title_txt_l_format:

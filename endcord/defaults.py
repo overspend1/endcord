@@ -17,6 +17,7 @@ settings = {
     "member_list_auto_open": True,
     "use_nick_when_available": True,
     "remember_state": True,
+    "remember_tabs": True,
     "reply_mention": True,
     "cache_typed": True,
     "show_pending_messages": True,

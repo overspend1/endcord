@@ -39,7 +39,9 @@ Note: always put string in `""`. To use `"` inside the string escape it like thi
 - `use_nick_when_avail = True`  
     Replace global_name with nick when it is available.
 - `remember_state = True`  
-    Remember last open channel on exit and reopen it on start.
+    Remember previous state across session. This include: last opened channel, tree layout, muted state, folder names, tabs, games blacklist.
+- `remember_tabs = True`  
+    Remember tabbed channels across sessions. Only if `remember_state` is True.
 - `reply_mention = True`  
     Ping someone by default when replying.
 - `cache_typed = True`  

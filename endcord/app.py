@@ -260,6 +260,7 @@ class Endcord:
             "muted": False,
             "collapsed": [],
             "folder_names": [],
+            "tabbed_channels": [],
             "games_blacklist": [],
         }
         self.tree = []
@@ -760,8 +761,7 @@ class Endcord:
                 new_messages = self.get_messages_with_members(num=self.msg_num)
                 if new_messages is not None:
                     self.messages = new_messages
-                    if self.messages:
-                        self.last_message_id = self.get_chat_last_message_id()
+                    self.last_message_id = self.get_chat_last_message_id()
                 else:
                     self.remove_running_task("Switching channel", 1)
                     logger.warning("Channel switching failed")
@@ -1178,12 +1178,16 @@ class Endcord:
             if pinned >= self.limit_channel_cache:   # skip if all are pinned
                 return
             messages = [x for x in messages if not x.get("deleted")]
+            if self.get_chat_last_message_id() == self.last_message_id:   # only keep latest messages
+                messages = messages[:self.msg_num]
+            else:
+                messages = []
             for num, channel in enumerate(self.channel_cache):
                 if channel[0] == channel_id:
-                    self.channel_cache[num] = [channel_id, messages[:self.msg_num], set_pinned]
+                    self.channel_cache[num] = [channel_id, messages, set_pinned]
                     break
             else:
-                self.channel_cache.append([channel_id, messages[:self.msg_num], set_pinned])
+                self.channel_cache.append([channel_id, messages, set_pinned])
                 if len(self.channel_cache) > self.limit_channel_cache:
                     for num, channel in enumerate(self.channel_cache):
                         if not channel[2]:   # dont remove pinned
@@ -1197,7 +1201,13 @@ class Endcord:
             cached = self.channel_cache[num]
         else:
             cached = self.channel_cache.pop(num)
-        self.messages = cached[1]
+        if cached[1]:
+            self.messages = cached[1]
+        else:
+            new_messages = self.get_messages_with_members(num=self.msg_num)
+            if new_messages is None:
+                return
+            self.messages = new_messages
         self.active_channel["pinned"] = cached[2]
 
         if self.messages:
@@ -1217,7 +1227,7 @@ class Endcord:
 
     def remove_channel_cache(self, num=None, active=False):
         """Remove cached channel"""
-        if active:
+        if active and num is None:
             for num_cache, channel in enumerate(self.channel_cache):
                 if channel[0] == self.active_channel["channel_id"]:
                     num = num_cache
@@ -1244,6 +1254,12 @@ class Endcord:
                     self.update_extra_line("Can't add tab: channel cache limit reached.")
                 else:
                     self.active_channel["pinned"] = True
+            if self.config["remember_tabs"]:
+                tabbed_channels = [channel[0] for channel in self.channel_cache if channel[2]]
+                if self.active_channel["pinned"]:
+                    tabbed_channels.append(self.active_channel["channel_id"])
+                self.state["tabbed_channels"] = tabbed_channels
+                peripherals.save_json(self.state, f"state_{self.profiles["selected"]}.json")
             self.update_tabs(add_current=True)
 
 
@@ -3463,7 +3479,7 @@ class Endcord:
                 self.update_tree()
                 self.update_chat(scroll=False)
 
-        elif cmd_type == 60 and self.current_channel["type"] in (11, 12):   # TOGGLE_THREAD
+        elif cmd_type == 60 and self.current_channel.get("type") in (11, 12):   # TOGGLE_THREAD
             thread_id = self.active_channel["channel_id"]
             guild_id, channel_id, _ = self.find_parents_from_id(self.active_channel)
             self.thread_toggle_join(guild_id, channel_id, thread_id)
@@ -3522,6 +3538,18 @@ class Endcord:
             self.tui.set_fun(self.fun)
             self.state["snow"] = self.fun == 3
             peripherals.save_json(self.state, f"state_{self.profiles["selected"]}.json")
+
+        elif cmd_type == 68:   # REMOVE_ALL_TABS
+            for channel in reversed(self.channel_cache):
+                if channel[2] is True:
+                    self.channel_cache.remove(channel)
+            if self.config["remember_tabs"]:
+                tabbed_channels = [channel[0] for channel in self.channel_cache if channel[2]]
+                if self.active_channel["pinned"]:
+                    tabbed_channels.append(self.active_channel["channel_id"])
+                self.state["tabbed_channels"] = tabbed_channels
+                peripherals.save_json(self.state, f"state_{self.profiles["selected"]}.json")
+            self.update_tabs()
 
         if success is None:
             self.gateway.set_offline()
@@ -6968,6 +6996,9 @@ class Endcord:
         for folder in self.guild_folders:
             if folder["id"] and folder["id"] != "MISSING" and folder["id"] not in self.state["collapsed"]:
                 self.state["collapsed"].append(folder["id"])
+        if self.config["remember_tabs"]:
+            for channel_id in self.state["tabbed_channels"]:
+                self.add_to_channel_cache(channel_id, [], True)
         self.tui.set_fun(self.fun)
 
         # load summaries
