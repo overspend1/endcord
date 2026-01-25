@@ -42,6 +42,7 @@ settings = {
     "media_cap_fps": 30,
     "rpc_external": True,
     "emoji_as_text": False,
+    "message_spacing": False,
     "native_media_player": False,
     "native_file_dialog": "auto",
     "save_summaries": True,

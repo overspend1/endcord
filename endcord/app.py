@@ -292,6 +292,7 @@ class Endcord:
         self.timed_extra_line = threading.Event()
         self.log_queue_manager = None
         self.message_send_queue = queue.Queue()
+        self.notifications = []
         self.terminal_media = None
         # threading.Thread(target=self.profiling_auto_exit, daemon=True).start()
         self.discord.get_voice_regions()
@@ -528,7 +529,6 @@ class Endcord:
         if self.my_user_data:
             self.update_prompt()
         self.typing = []
-        self.notifications = []
         self.typing_sent = int(time.time())
         self.sent_ack_time = time.time() - self.ack_throttling
         self.pending_acks = []

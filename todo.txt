@@ -1,6 +1,5 @@
-Fix media player and qr code on windows
-Add ability to open custom emoji with media player
 Add option to save current tabs to state
+Add ability to open custom emoji with media player
 Investigate read state reverting after reconnect
 
 Vim-like bindings
@@ -29,6 +28,7 @@ after fixing https://github.com/python/cpython/issues/119138
     Show inline media in chat
     Add bg color for mentions and channels in chat
 
+Add scrollbar to chat
 Fix per-channel member list
 Video calls
 Localization
