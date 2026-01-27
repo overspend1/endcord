@@ -1,10 +1,13 @@
+Fix unreads line appearing in current chat
 Add ability to open custom emoji with media player
 Investigate read state reverting after reconnect
+Add option to select individual message
 
 Vim-like bindings
     have input mode - type in input line
     have normal mode - single keys can be used as bindings and execute commands
-    show current mode in bars and prompt
+        hjkl and g/G for movement
+    show current mode in title/status and prompt
 
 Voice channels
     add voice channels to tree

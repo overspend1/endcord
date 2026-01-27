@@ -1142,9 +1142,10 @@ class TUI():
             if title_txt_r:
                 title_txt_r = title_txt_r[:w - 2*self.bordered]
             if self.title_txt_r:
+                title_txt_r = replace_spaces_dash(trim_with_dash(title_txt_r, dash=self.bordered))
+                title_txt_l = replace_spaces_dash(trim_with_dash(self.title_txt_l, dash=self.bordered))
                 if self.bordered:
-                    title_txt_r = replace_spaces_dash(trim_with_dash(title_txt_r))
-                    title_txt_l = self.corner_ul + replace_spaces_dash(trim_with_dash(self.title_txt_l))
+                    title_txt_l = self.corner_ul + title_txt_l
                     title_txt_r = title_txt_r[: max(w - (len(title_txt_l) + 5), 0)] + "─" + self.corner_ur
                     title_txt_l = title_txt_l + "─" * (w - len(title_txt_l) - len(title_txt_r))
                     new_format_l = []
@@ -1152,8 +1153,7 @@ class TUI():
                         new_format_l.append((item[0], item[1] + 1, min(item[2] + 1, w-1)))
                     self.title_txt_l_format = new_format_l
                 else:
-                    title_txt_r += " "
-                    title_txt_r = self.title_txt_l[: max(w - (len(title_txt_r) + 2), 0)]
+                    title_txt_r = title_txt_r[: max(w - (len(title_txt_r) + 2), 0)] + " "
                     title_txt_l = title_txt_l + " " * (w - len(title_txt_l) - len(title_txt_r))
                 title_line = title_txt_l + title_txt_r
                 text_l_len = len(title_txt_l)

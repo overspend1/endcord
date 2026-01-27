@@ -874,7 +874,6 @@ def generate_chat(messages, roles, channels, max_length, my_id, my_roles, member
 
     chat = []
     chat_format = []
-    indexes = []
     chat_map = []   # ((num, username:(st, end), is_reply, reactions:((st, end), ...), date:(st, end), url:(st, end, index)), ...)
     wide_map = []
     len_edited = len(edited_string)
@@ -998,7 +997,6 @@ def generate_chat(messages, roles, channels, max_length, my_id, my_roles, member
                 message["stickers"] = []
                 color_base = color_blocked
             else:
-                indexes.append(0)
                 temp_chat_map.append(None)
                 continue   # to not break message-to-chat conversion
 
@@ -1008,26 +1006,26 @@ def generate_chat(messages, roles, channels, max_length, my_id, my_roles, member
                 if message_spacing:
                     temp_chat.append(" " * max_length)
                     temp_format.append([color_base])
-                    temp_chat_map.append((num, None, None, None, None, None, None))
+                    temp_chat_map.append((None, None, None, None, None, None, None))
                 # keep text always in center
                 filler = max_length - 3
                 filler_l = filler // 2
                 filler_r = filler - filler_l
                 temp_chat.append(f"{date_separator * filler_l}New{date_separator * filler_r}")
                 temp_format.append([color_deleted])
-                temp_chat_map.append((num, None, None, None, None, None, None))
+                temp_chat_map.append(None)
                 have_unseen_messages_line = True
                 if message_spacing:
                     temp_chat.append(" " * max_length)
                     temp_format.append([color_base])
-                    temp_chat_map.append((num, None, None, None, None, None, None))
+                    temp_chat_map.append(None)
 
             # date separator
             elif enable_separator and day_from_snowflake(message["id"]) != day_from_snowflake(messages[num+1]["id"]):
                 if message_spacing:
                     temp_chat.append(" " * max_length)
                     temp_format.append([color_base])
-                    temp_chat_map.append((num, None, None, None, None, None, None))
+                    temp_chat_map.append(None)
                 # if this message is 1 day older than next message (up - past message)
                 date = generate_timestamp(message["timestamp"], format_date, convert_timezone)
                 # keep text always in center
@@ -1036,17 +1034,17 @@ def generate_chat(messages, roles, channels, max_length, my_id, my_roles, member
                 filler_r = filler - filler_l
                 temp_chat.append(f"{date_separator * filler_l}{date}{date_separator * filler_r}")
                 temp_format.append([color_separator])
-                temp_chat_map.append((num, None, None, None, None, None, None))
+                temp_chat_map.append(None)
                 if message_spacing:
                     temp_chat.append(" " * max_length)
                     temp_format.append([color_base])
-                    temp_chat_map.append((num, None, None, None, None, None, None))
+                    temp_chat_map.append(None)
 
             # empty separator between messages not from same sender
             elif message_spacing and message["user_id"] != messages[num+1]["user_id"]:
                 temp_chat.append(" " * max_length)
                 temp_format.append([color_base])
-                temp_chat_map.append((num, None, None, None, None, None, None))
+                temp_chat_map.append(None)
         except IndexError:
             pass
 
@@ -1479,7 +1477,6 @@ def generate_chat(messages, roles, channels, max_length, my_id, my_roles, member
                 reactions_map.append([pre_reaction_len + offset, pre_reaction_len + len(reaction) + offset])
                 offset += len(reactions_separator) + len(reaction)
             temp_chat_map.append((num, None, False, reactions_map, None, None, None))
-        indexes.append(len(temp_chat))
 
         # invert message lines order and append them to chat
         # it is inverted because chat is drawn from down to upside
@@ -1487,7 +1484,7 @@ def generate_chat(messages, roles, channels, max_length, my_id, my_roles, member
         chat.extend(temp_chat[::-1])
         chat_format.extend(temp_format[::-1])
         chat_map.extend(temp_chat_map[::-1])
-    return chat, chat_format, indexes, chat_map, wide_map
+    return chat, chat_format, chat_map, wide_map
 
 
 def generate_status_line(my_user_data, my_status, unseen, typing, active_channel, action, tasks, tabs, tabs_format, format_status_line, format_rich, slowmode=None, limit_typing=30, use_nick=True, fun=True):
@@ -1772,16 +1769,14 @@ def generate_log(log, colors, max_width):
     """Generate log lines shown in chat area"""
     chat = []
     chat_format = []
-    indexes = []
     chat_map = []
     for message in log:
         temp_chat = split_long_line(message, max_width, 4)
         chat.extend(temp_chat)
         chat_format.extend([[[colors[0]]]] * len(temp_chat))
-        indexes.append(len(temp_chat))
         chat_map.extend([None] * len(temp_chat))
     chat = chat[::-1]
-    return chat, chat_format, indexes, chat_map
+    return chat, chat_format, chat_map
 
 
 def generate_extra_line(attachments, selected, max_len):
@@ -2429,7 +2424,7 @@ def generate_tree(dms, guilds, threads, read_state, guild_folders, activities, c
                     break
         mention_count = generate_count(len(ch_read_state["mentions"])) if unseen_dm else ""
         tree.append(normalize_string_with_suffix(f"{intersection} {name}", mention_count, max_w, emoji_safe=not(safe_emoji)))
-        if muted:
+        if muted and not active:
             code += 10
         elif active and not mentioned_dm:
             code += 40

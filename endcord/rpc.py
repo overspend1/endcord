@@ -367,10 +367,9 @@ class RPC:
             threading.Thread(target=self.client_thread, daemon=True, args=(client, )).start()
 
 
-    def get_activities(self, force=False):
-        """Get activities for all connected apps, only when they changed."""
-        if self.changed or force:
-            self.changed = False
-            logger.debug(f"Sending: {json.dumps(self.activities, indent=2)}")
-            return self.activities
-        return None
+    def get_activities(self):
+        """Get activities for all connected apps, and if they changed."""
+        cache = self.changed
+        self.changed = False
+        logger.debug(f"Sending: {json.dumps(self.activities, indent=2)}")
+        return self.activities, cache

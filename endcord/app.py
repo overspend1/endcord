@@ -525,7 +525,6 @@ class Endcord:
         self.tab_string_format = []
         self.new_unreads = False
         self.this_unread = False
-        self.chat_indexes = []
         self.chat_map = []
         if self.my_user_data:
             self.update_prompt()
@@ -595,7 +594,10 @@ class Endcord:
             }
         for num, _ in enumerate(self.channel_cache):
             if self.channel_cache[num][2]:
-                self.channel_cache[num][3] = True   # mark as invalid
+                if len(self.channel_cache[num]) < 4:
+                    self.channel_cache[num].append(True)
+                else:
+                    self.channel_cache[num][3] = True   # mark as invalid
             else:
                 _ = self.channel_cache.pop(num)
 
@@ -964,7 +966,6 @@ class Endcord:
 
         self.chat = []
         self.chat_format = []
-        self.chat_indexes = []
         self.chat_map = []
 
         self.tui.update_chat(self.chat, self.chat_format)
@@ -1412,7 +1413,12 @@ class Endcord:
             # reply
             elif action == 1 and self.messages:
                 self.reset_states()
-                message = self.messages[self.lines_to_msg(chat_sel)]
+                self.restore_input_text = (input_text, "standard")
+                self.update_status_line()
+                msg_index = self.lines_to_msg(chat_sel)
+                if msg_index is None:
+                    continue
+                message = self.messages[msg_index]
                 if "deleted" not in message and "pending" not in message:
                     if message["user_id"] == self.my_id:
                         mention = None
@@ -1424,13 +1430,14 @@ class Endcord:
                         "global_name": message["global_name"],
                         "mention": mention,
                     }
-                self.restore_input_text = (input_text, "standard")
-                self.update_status_line()
 
             # edit
             elif action == 2 and self.messages:
                 self.restore_input_text = (input_text, "standard")
-                message = self.messages[self.lines_to_msg(chat_sel)]
+                msg_index = self.lines_to_msg(chat_sel)
+                if msg_index is None:
+                    continue
+                message = self.messages[msg_index]
                 if message["user_id"] == self.my_id and "deleted" not in message and "pending" not in message:
                     self.reset_states()
                     self.editing = message["id"]
@@ -1441,7 +1448,10 @@ class Endcord:
             # delete
             elif action == 3 and self.messages:
                 self.restore_input_text = (input_text, "standard")
-                message = self.messages[self.lines_to_msg(chat_sel)]
+                msg_index = self.lines_to_msg(chat_sel)
+                if msg_index is None:
+                    continue
+                message = self.messages[msg_index]
                 if (message["user_id"] == self.my_id or self.active_channel["admin"]) and "deleted" not in message and "pending" not in message:
                     self.reset_states()
                     self.ignore_typing = True
@@ -1465,11 +1475,16 @@ class Endcord:
             elif action == 8 and self.messages:
                 self.restore_input_text = (input_text, "standard")
                 msg_index = self.lines_to_msg(chat_sel)
+                if msg_index is None:
+                    continue
                 self.go_replied(msg_index)
 
             # download file
             elif action == 9:
+                self.restore_input_text = (input_text, "standard")
                 msg_index = self.lines_to_msg(chat_sel)
+                if msg_index is None:
+                    continue
                 embeds = []
                 for embed in self.messages[msg_index]["embeds"]:
                     if embed["url"]:
@@ -1480,7 +1495,6 @@ class Endcord:
                     if urls[num] in embeds:
                         selected_urls.append(urls[num])
                 if len(selected_urls) == 1:
-                    self.restore_input_text = (input_text, "standard")
                     self.download_threads.append(threading.Thread(target=self.download_file, daemon=True, args=(selected_urls[0], )))
                     self.download_threads[-1].start()
                 else:
@@ -1496,13 +1510,15 @@ class Endcord:
 
             # open link in browser
             elif action == 10:
+                self.restore_input_text = (input_text, "standard")
                 msg_index = self.lines_to_msg(chat_sel)
+                if msg_index is None:
+                    continue
                 selected_urls = []
                 urls = self.get_msg_urls_chat(msg_index)
                 for num in self.get_url_from_selected_line(chat_sel):
                     selected_urls.append(urls[num])
                 if len(selected_urls) == 1:
-                    self.restore_input_text = (input_text, "standard")
                     selected_url = self.refresh_attachment_url(selected_urls[0])
                     webbrowser.open(selected_url, new=0, autoraise=True)
                 elif selected_urls:
@@ -1520,7 +1536,10 @@ class Endcord:
 
             # view media
             elif action == 17:
+                self.restore_input_text = (input_text, "standard")
                 msg_index = self.lines_to_msg(chat_sel)
+                if msg_index is None:
+                    continue
                 embeds = self.get_msg_embeds(msg_index)
                 selected_urls = []
                 urls = self.get_msg_urls_chat(msg_index)
@@ -1531,7 +1550,6 @@ class Endcord:
                 else:
                     selected_urls = embeds
                 if len(selected_urls) == 1:
-                    self.restore_input_text = (input_text, "standard")
                     self.download_threads.append(threading.Thread(target=self.download_file, daemon=True, args=(selected_urls[0], False, True)))
                     self.download_threads[-1].start()
                 elif selected_urls:
@@ -1560,6 +1578,8 @@ class Endcord:
             elif action == 12 and self.messages:
                 self.restore_input_text = (input_text, "standard")
                 msg_index = self.lines_to_msg(chat_sel)
+                if msg_index is None:
+                    continue
                 peripherals.copy_to_clipboard(self.messages[msg_index]["content"])
 
             # upload file
@@ -1606,6 +1626,8 @@ class Endcord:
             elif action == 18:
                 self.restore_input_text = (input_text, "standard")
                 msg_index = self.lines_to_msg(chat_sel)
+                if msg_index is None:
+                    continue
                 self.spoil(msg_index)
 
             # open guild in tree
@@ -1661,6 +1683,8 @@ class Endcord:
             elif action == 24:
                 self.restore_input_text = (input_text, "standard extra")
                 msg_index = self.lines_to_msg(chat_sel)
+                if msg_index is None:
+                    continue
                 user_id = self.messages[msg_index]["user_id"]
                 guild_id = self.active_channel["guild_id"]
                 if self.viewing_user_data["id"] != user_id or self.viewing_user_data["guild_id"] != guild_id:
@@ -1788,6 +1812,8 @@ class Endcord:
             elif action == 31 and self.messages:
                 self.restore_input_text = (input_text, "standard")
                 msg_index = self.lines_to_msg(chat_sel)
+                if msg_index is None:
+                    continue
                 if "pending" not in self.messages[msg_index]:
                     self.copy_msg_url(msg_index)
 
@@ -1795,6 +1821,8 @@ class Endcord:
             elif action == 32:
                 self.restore_input_text = (input_text, "standard")
                 msg_index = self.lines_to_msg(chat_sel)
+                if msg_index is None:
+                    continue
                 channels = []
                 for match in re.finditer(formatter.match_discord_channel_combined, self.messages[msg_index]["content"]):
                     # groups: 1 - channel_id for <#id>, 2 - guild_id for url, 3 - channel_id for url, 4 - msg_id for url
@@ -1849,9 +1877,11 @@ class Endcord:
 
             # react
             elif action == 36 and self.messages:
-                msg_index = self.lines_to_msg(chat_sel)
                 self.add_to_store(self.active_channel["channel_id"], input_text)
-                message = self.messages[self.lines_to_msg(chat_sel)]
+                msg_index = self.lines_to_msg(chat_sel)
+                if msg_index is None:
+                    continue
+                message = self.messages[msg_index]
                 if "deleted" not in message and "pending" not in message:
                     self.restore_input_text = (None, "react")
                     self.ignore_typing = True
@@ -1867,6 +1897,8 @@ class Endcord:
             elif action == 37 and self.messages:
                 self.restore_input_text = (input_text, "standard extra")
                 msg_index = self.lines_to_msg(chat_sel)
+                if msg_index is None:
+                    continue
                 multiple = self.do_view_reactions(msg_index)
                 if multiple:
                     self.add_to_store(self.active_channel["channel_id"], input_text)
@@ -1985,8 +2017,11 @@ class Endcord:
                 if clicked_chat is not None and mouse_x is not None:
                     chat_line_map = self.chat_map[clicked_chat]
                     if self.forum:
+                        msg_index = self.lines_to_msg(chat_sel)
+                        if msg_index is None:
+                            continue
                         messages = self.messages + self.forum_old
-                        message = messages[self.lines_to_msg(clicked_chat)]
+                        message = messages[msg_index]
                         self.switch_channel(
                             message["id"],
                             message["name"],
@@ -2012,7 +2047,7 @@ class Endcord:
                                     selected = num
                                     break
                         elif chat_line_map[4] and chat_line_map[4][0] < mouse_x < chat_line_map[4][1]:
-                            clicked_type = 1   # message body
+                            clicked_type = 1   # message timestamp
                         else:
                             if chat_line_map[5]:   # url/embed
                                 for num, url in enumerate(chat_line_map[5]):
@@ -2602,10 +2637,14 @@ class Endcord:
 
         elif cmd_type == 3:   # GO_REPLY
             msg_index = self.lines_to_msg(chat_sel)
+            if msg_index is None:
+                return
             self.go_replied(msg_index)
 
         elif cmd_type == 4:   # DOWNLOAD
             msg_index = self.lines_to_msg(chat_sel)
+            if msg_index is None:
+                return
             select_num = cmd_args.get("num", 0)
             embeds = []
             for embed in self.messages[msg_index]["embeds"]:
@@ -2633,6 +2672,8 @@ class Endcord:
 
         elif cmd_type in (5, 64):   # OPEN_LINK and COPY_LINK
             msg_index = self.lines_to_msg(chat_sel)
+            if msg_index is None:
+                return
             select_num = cmd_args.get("num", 0)
             selected_urls = []
             urls = self.get_msg_urls_chat(msg_index)
@@ -2658,6 +2699,8 @@ class Endcord:
 
         elif cmd_type == 6:   # PLAY
             msg_index = self.lines_to_msg(chat_sel)
+            if msg_index is None:
+                return
             select_num = cmd_args.get("num", 0)
             embeds = self.get_msg_embeds(msg_index)
             selected_urls = []
@@ -2691,6 +2734,8 @@ class Endcord:
 
         elif cmd_type == 8:   # COPY_MESSAGE
             msg_index = self.lines_to_msg(chat_sel)
+            if msg_index is None:
+                return
             peripherals.copy_to_clipboard(self.messages[msg_index]["content"])
 
         elif cmd_type == 9:   # UPLOAD
@@ -2716,6 +2761,8 @@ class Endcord:
         elif cmd_type == 10:   # SPOIL
             spoiler_index = cmd_args.get("num", None)
             msg_index = self.lines_to_msg(chat_sel)
+            if msg_index is None:
+                return
             self.spoil(msg_index, spoiler_index)
 
         elif cmd_type == 11 and self.tree_metadata[tree_sel] and self.tree_metadata[tree_sel]["type"] in (11, 12):   # TOGGLE_THREAD_TREE
@@ -2728,6 +2775,8 @@ class Endcord:
             user_id = cmd_args.get("user_id", None)
             if not user_id:
                 msg_index = self.lines_to_msg(chat_sel)
+                if msg_index is None:
+                    return
                 user_id = self.messages[msg_index]["user_id"]
             guild_id = self.active_channel["guild_id"]
             if self.viewing_user_data["id"] != user_id or self.viewing_user_data["guild_id"] != guild_id:
@@ -2806,11 +2855,15 @@ class Endcord:
 
         elif cmd_type == 18:   # LINK_MESSAGE
             msg_index = self.lines_to_msg(chat_sel)
+            if msg_index is None:
+                return
             if "pending" not in self.messages[msg_index]:
                 self.copy_msg_url(msg_index)
 
         elif cmd_type == 19:   # GOTO_MENTION
             msg_index = self.lines_to_msg(chat_sel)
+            if msg_index is None:
+                return
             select_num = max(cmd_args.get("num", 0), 0)
             channels = []
             for match in re.finditer(formatter.match_discord_channel_combined, self.messages[msg_index]["content"]):
@@ -2866,6 +2919,8 @@ class Endcord:
         elif cmd_type == 23:   # REACT
             react_text = cmd_args.get("react_text")
             msg_index = self.lines_to_msg(chat_sel)
+            if msg_index is None:
+                return
             if not react_text:
                 reset = False
                 if "deleted" not in self.messages[msg_index] and "pending" not in self.messages[msg_index]:
@@ -2883,6 +2938,8 @@ class Endcord:
 
         elif cmd_type == 24:   # SHOW_REACTIONS
             msg_index = self.lines_to_msg(chat_sel)
+            if msg_index is None:
+                return
             multiple = self.do_view_reactions(msg_index)
             if multiple:
                 self.restore_input_text = (None, "prompt")
@@ -2939,6 +2996,8 @@ class Endcord:
             user_id = cmd_args.get("user_id", None)
             if not user_id:
                 msg_index = self.lines_to_msg(chat_sel)
+                if msg_index is None:
+                    return
                 user_id = self.messages[msg_index]["user_id"]
             avatar_id = None
             if user_id == self.my_id:
@@ -3047,6 +3106,8 @@ class Endcord:
         elif cmd_type == 34:   # VOTE
             select_num = max(cmd_args.get("num", 0), 0)
             msg_index = self.lines_to_msg(chat_sel)
+            if msg_index is None:
+                return
             poll = self.messages[msg_index].get("poll")
             if poll:
                 if poll["expires"] > time.time():
@@ -3078,6 +3139,8 @@ class Endcord:
 
         elif cmd_type == 36:   # PIN_MESSAGE
             msg_index = self.lines_to_msg(chat_sel)
+            if msg_index is None:
+                return
             if "deleted" not in self.messages[msg_index] and "pending" not in self.messages[msg_index]:
                 if not self.active_channel["guild_id"] or (self.active_channel["admin"] or self.active_channel.get("allow_manage")):
                     success = self.discord.send_pin(
@@ -3089,6 +3152,8 @@ class Endcord:
 
         elif cmd_type == 37:   # PUSH_BUTTON
             msg_index = self.lines_to_msg(chat_sel)
+            if msg_index is None:
+                return
             message = self.messages[msg_index]
             if "component_info" in message and message["component_info"]["buttons"]:
                 disabled = False
@@ -3131,6 +3196,8 @@ class Endcord:
         elif cmd_type == 38:   # STRING_SELECT
             chat_sel, _ = self.tui.get_chat_selected()
             msg_index = self.lines_to_msg(chat_sel)
+            if msg_index is None:
+                return
             message = self.messages[msg_index]
             if "component_info" in message and message["component_info"]["buttons"]:
                 if cmd_args["num"]:
@@ -3471,8 +3538,9 @@ class Endcord:
             self.run = False
 
         elif cmd_type == 59:   # MARK_AS_UNREAD
-            message_index = min(self.lines_to_msg(self.tui.get_chat_selected()[0])+1, len(self.messages)-1)
-            message_id = self.messages[message_index]["id"]
+            msg_index = self.lines_to_msg(self.tui.get_chat_selected()[0], space=True)+1
+            msg_index = min(msg_index, len(self.messages)-1)
+            message_id = self.messages[msg_index]["id"]
             if message_id:
                 self.send_ack(self.active_channel["channel_id"], message_id, manual=True)
                 self.set_channel_unseen(self.active_channel["channel_id"], self.get_chat_last_message_id(), False, False, last_acked_message_id=message_id)
@@ -4273,12 +4341,12 @@ class Endcord:
                 return
             if new_chunk and self.get_chat_last_message_id() == self.last_message_id and new_chunk[0]["id"] != self.last_message_id:
                 self.add_to_channel_cache(self.active_channel["channel_id"], self.messages, self.active_channel.get("pinned", False))
-            selected_id = self.messages[self.lines_to_msg(self.tui.get_chat_selected()[0])]["id"]
+            selected_id = self.messages[self.lines_to_msg(self.tui.get_chat_selected()[0], space=True)]["id"]
             self.messages = self.messages + new_chunk
             all_msg = len(self.messages)
             old_chat_len = len(self.chat)
             selected_line = old_chat_len - 1
-            selected_msg = self.lines_to_msg(selected_line)
+            selected_msg = self.lines_to_msg(selected_line, space=True)
             self.messages = self.messages[-self.limit_chat_buffer:]
             if new_chunk:
                 self.update_chat(keep_selected=None)
@@ -4314,10 +4382,10 @@ class Endcord:
                 return
             selected_line = 0
             old_chat_len = len(self.chat)
-            selected_msg = self.lines_to_msg(selected_line)
+            selected_msg = self.lines_to_msg(selected_line, space=True)
             if new_chunk and self.get_chat_last_message_id() == self.last_message_id and new_chunk[0]["id"] != self.last_message_id:
                 self.add_to_channel_cache(self.active_channel["channel_id"], self.messages, self.active_channel.get("pinned", False))
-            selected_id = self.messages[self.lines_to_msg(self.tui.get_chat_selected()[0])]["id"]
+            selected_id = self.messages[self.lines_to_msg(self.tui.get_chat_selected()[0], space=True)]["id"]
             self.messages = new_chunk + self.messages
             all_msg = len(self.messages)
             self.messages = self.messages[:self.limit_chat_buffer]
@@ -4657,7 +4725,7 @@ class Endcord:
         time.sleep(0.1)   # time to finish self.update_chat in main loop when resize
         self.messages = []
         log = log_queue.read_log_file(os.path.expanduser(os.path.join(peripherals.log_path, peripherals.APP_NAME) + ".log"))
-        self.chat, self.chat_format, self.chat_indexes, self.chat_map = formatter.generate_log(
+        self.chat, self.chat_format, self.chat_map = formatter.generate_log(
             log,
             self.colors,
             self.tui.get_dimensions()[2][1],
@@ -4681,7 +4749,7 @@ class Endcord:
                 log.pop(0)
             selected_line, chat_index = self.tui.get_chat_selected()
             old_chat_len = len(self.chat)
-            self.chat, self.chat_format, self.chat_indexes, self.chat_map = formatter.generate_log(
+            self.chat, self.chat_format, self.chat_map = formatter.generate_log(
                 log,
                 self.colors,
                 self.tui.get_dimensions()[2][1],
@@ -4959,14 +5027,15 @@ class Endcord:
             elif assist_word.lower().startswith("string_select "):
                 chat_sel, _ = self.tui.get_chat_selected()
                 msg_index = self.lines_to_msg(chat_sel)
-                message = self.messages[msg_index]
-                if "component_info" in message and message["component_info"]["buttons"]:
-                    self.assist_found = search.search_string_selects(
-                        message,
-                        assist_word[14:],
-                        limit=self.assist_limit,
-                        score_cutoff=self.assist_score_cutoff,
-                    )
+                if msg_index is not None:
+                    message = self.messages[msg_index]
+                    if "component_info" in message and message["component_info"]["buttons"]:
+                        self.assist_found = search.search_string_selects(
+                            message,
+                            assist_word[14:],
+                            limit=self.assist_limit,
+                            score_cutoff=self.assist_score_cutoff,
+                        )
 
             elif assist_word.lower().startswith("set_notifications "):
                 query_words = assist_word.split(" ")
@@ -5300,7 +5369,7 @@ class Endcord:
             if last_acked_unreads_line and (not last_message_id or int(last_acked_unreads_line) < int(last_message_id)):
                 last_seen_msg = channel["last_acked_unreads_line"]
 
-        self.chat, self.chat_format, self.chat_indexes, self.chat_map, wide_map = formatter.generate_chat(
+        self.chat, self.chat_format, self.chat_map, wide_map = formatter.generate_chat(
             self.messages,
             self.current_roles,
             self.current_channels,
@@ -5351,7 +5420,6 @@ class Endcord:
             self.colors_formatted,
             self.config,
         )
-        self.chat_indexes = [1] * len(messages)
         self.chat_map = [None] * len(messages)
         self.tui.set_wide_map([])
 
@@ -5686,23 +5754,38 @@ class Endcord:
             self.tui.set_tray_icon(tray_state)
 
 
-    def lines_to_msg(self, lines):
+    def lines_to_msg(self, line_index, space=False):
         """Convert line index from formatted chat to message index"""
-        total_len = 0
-        for num, msg_len in enumerate(self.chat_indexes):
-            total_len += msg_len
-            if total_len >= lines + 1:
-                return num
-        return 0
+        line_map = self.chat_map[line_index]
+        if line_map and line_map[0] is not None:   # has timestamp range
+            return line_map[0]
+        if space:
+            i = 0
+            while i < 5:
+                line_map = self.chat_map[line_index - i]
+                if line_map and line_map[0]:
+                    return line_map[0]
+                i += 1
+            return 0
+        return None
 
 
-    def lines_to_msg_with_remainder(self, lines):
+    def lines_to_msg_with_remainder(self, line_index):
         """Convert line index from formatted chat to message index and remainder"""
-        total_len = 0
-        for num, msg_len in enumerate(self.chat_indexes):
-            total_len += msg_len
-            if total_len >= lines + 1:
-                return num, total_len - (lines + 1)
+        i = 0
+        while i < 5:
+            line_map = self.chat_map[line_index - i]
+            if line_map and line_map[0] is not None:
+                if line_map[4]:
+                    return line_map[0], 0
+                remainder = 0
+                while remainder < len(self.chat_map) - (line_index + remainder + 1):
+                    remainder_line_map = self.chat_map[line_index + remainder + 1]
+                    if remainder_line_map and(remainder_line_map[0] is None or remainder_line_map[0] != line_map[0]):
+                        break
+                    remainder += 1
+                return line_map[0], remainder
+            i += 1
         return 0, 0
 
 
@@ -5710,14 +5793,16 @@ class Endcord:
         """Convert message index to line index from formatted chat"""
         in_msg_start_index = 0
         if smart:
-            for chat_line_map in reversed(self.chat_map):
-                if chat_line_map and chat_line_map[0] == msg_index:
-                    if chat_line_map[1]:
+            for line_map in reversed(self.chat_map):
+                if line_map and line_map[0] == msg_index and line_map[4]:
+                    if line_map[1]:
                         break
                     in_msg_start_index += 1
             else:
                 in_msg_start_index = 0
-        return sum(self.chat_indexes[:msg_index + 1]) - 1 - in_msg_start_index
+        for line_index, line_map in enumerate(self.chat_map):
+            if line_map and line_map[0] == msg_index and line_map[4]:      # message root has timestamp range
+                return line_index - in_msg_start_index
 
 
     def set_mix_seen(self, target_id):
@@ -7213,11 +7298,14 @@ class Endcord:
 
             # send new rpc activities
             if self.enable_rpc:
-                new_activities = self.rpc.get_activities()
-                if new_activities is not None and self.gateway_state == 1:
-                    rpc_apps_ids = [d["application_id"] for d in new_activities]
-                    game_detection_activities = self.game_detection.get_activities(force=True) if self.enable_game_detection else []
-                    self.my_activities = new_activities + [d for d in game_detection_activities if d["application_id"] not in rpc_apps_ids]
+                rpc_activities, changed = self.rpc.get_activities()
+                if changed and self.gateway_state == 1:
+                    if self.enable_game_detection:
+                        game_activities, _ = self.game_detection.get_activities()
+                        rpc_apps_ids = [d["application_id"] for d in rpc_activities]
+                        self.my_activities = rpc_activities + [d for d in game_activities if d["application_id"] not in rpc_apps_ids]
+                    else:
+                        self.my_activities = rpc_activities
                     self.gateway.update_presence(
                         self.my_status["status"],
                         custom_status=self.my_status["custom_status"],
@@ -7228,12 +7316,14 @@ class Endcord:
 
             # send new detectable games activities
             if self.enable_game_detection:
-                new_activities = self.game_detection.get_activities()
-                if new_activities is not None and self.gateway_state == 1:
-                    # if new activities app_id not in rpc activities app_id
-                    rpc_activities = self.rpc.get_activities(force=True) if self.enable_rpc else []
-                    rpc_apps_ids = [d["application_id"] for d in rpc_activities]
-                    self.my_activities = rpc_activities + [d for d in new_activities if d["application_id"] not in rpc_apps_ids]
+                game_activities, changed = self.game_detection.get_activities()
+                if changed and self.gateway_state == 1:
+                    if self.enable_rpc:
+                        rpc_activities, _ = self.rpc.get_activities()
+                        rpc_apps_ids = [d["application_id"] for d in rpc_activities]
+                        self.my_activities = rpc_activities + [d for d in game_activities if d["application_id"] not in rpc_apps_ids]
+                    else:
+                        self.my_activities = game_activities
                     self.gateway.update_presence(
                         self.my_status["status"],
                         custom_status=self.my_status["custom_status"],
