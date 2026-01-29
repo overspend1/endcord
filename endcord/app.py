@@ -5395,8 +5395,8 @@ class Endcord:
             self.tui.set_selected(selected_line_new, change_amount=change_amount_lines, scroll=scroll, draw=False)
         elif select_message_index is not None:
             full_message = (self.config["message_spacing"] and select_unread)
-            selected_line = self.msg_to_lines(select_message_index, full=full_message) + 2 * full_message
-            self.tui.set_selected(selected_line, scroll=scroll, draw=False)
+            selected_line_new = abs(self.msg_to_lines(select_message_index, full=select_unread)) + 1 + full_message
+            self.tui.set_selected(selected_line_new, scroll=scroll, draw=False)
         elif keep_selected is not None:
             self.tui.set_selected(-1, scroll=scroll, draw=False)   # return to bottom
 
@@ -5812,6 +5812,7 @@ class Endcord:
                     if next_line_map and next_line_map[0] == line_map[0] and next_line_map[2]:
                         return line_index - in_msg_start_index - 1
                 return line_index - in_msg_start_index
+        return 0
 
 
     def set_mix_seen(self, target_id):

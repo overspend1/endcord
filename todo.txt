@@ -1,4 +1,3 @@
-Fix unreads line appearing in current chat
 Add ability to open custom emoji with media player
 Investigate read state reverting after reconnect
 
