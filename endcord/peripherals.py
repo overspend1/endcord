@@ -511,7 +511,10 @@ def notify_send(title, message, sound="message", custom_sound=None):
                 stdout=subprocess.PIPE,
                 stderr=subprocess.DEVNULL,
             )
-            return int(proc.communicate()[0].decode().strip("\n"))   # return notification id
+            try:
+                return int(proc.communicate()[0].decode().strip("\n"))   # return notification id
+            except ValueError:
+                return None
         return None
     if sys.platform == "win32":
         if custom_sound:

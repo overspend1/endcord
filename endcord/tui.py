@@ -2294,12 +2294,11 @@ class TUI():
                     return self.return_input_code(5)
 
             # handle chained keybindings
-            if key in self.chainable and not self.keybinding_chain:
+            if str(key) in self.chainable and not self.keybinding_chain:
                 self.keybinding_chain = key
                 continue
             if self.keybinding_chain:
                 key = f"{self.keybinding_chain}-{key}"
-                self.keybinding_chain = None
 
             if key == 10:   # ENTER
                 # when pasting, dont return, but insert newline character
@@ -2318,8 +2317,8 @@ class TUI():
                     self.input_select_start = None
                     return self.return_input_code(0)
 
-            if isinstance(key, str):
-                if len(key) > 1 and key.startswith("ALT+"):
+            if isinstance(key, str) and not self.keybinding_chain:
+                if len(key) > 1 and key.startswith("ALT+"):   # switching tab with Alt+Num
                     try:
                         modifier = key[:-3]   # skipping +/- sign
                         num = int(key[-2:])
@@ -2342,6 +2341,9 @@ class TUI():
                     if self.assist and not self.bracket_paste:
                         if key in ASSIST_TRIGGERS:
                             self.assist_start = self.input_index
+
+            if self.keybinding_chain:   # consume chain
+                self.keybinding_chain = None
 
             if isinstance(key, int) and 32 <= key <= 126:   # all regular characters
                 if self.input_select_start is not None:
