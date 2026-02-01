@@ -4976,6 +4976,7 @@ class Endcord:
                 self.active_channel["guild_id"],
                 self.gateway,
                 assist_word,
+                presences=self.current_subscribed_members,
                 limit=self.assist_limit,
                 score_cutoff=self.assist_score_cutoff,
             )
@@ -5769,6 +5770,8 @@ class Endcord:
     def lines_to_msg_with_remainder(self, line_index, space=False):
         """Convert line index from formatted chat to message index and remainder"""
         i = 0
+        if line_index >= len(self.chat_map):
+            line_index = len(self.chat_map) - 1
         while i < 5:
             line_map = self.chat_map[line_index - i]
             if line_map and line_map[0] is not None:
@@ -6160,13 +6163,13 @@ class Endcord:
                 peripherals.save_json(self.state, f"state_{self.profiles["selected"]}.json")
 
 
-    def process_msg_events_active_channel(self, new_message, selected_line):
+    def process_msg_events_active_channel(self, new_message, selected_line, latest_chat=True):
         """Process message events for currently active channel"""
         data = new_message["d"]
         op = new_message["op"]
         my_message = data.get("user_id") == self.my_id
         channel_id = self.active_channel["channel_id"]
-        if op == "MESSAGE_CREATE":
+        if op == "MESSAGE_CREATE" and latest_chat:
             change_amount = 1
             if my_message:
                 nonce = data.pop("nonce", None)
@@ -7206,6 +7209,9 @@ class Endcord:
                                 break
                         if in_cache:
                             self.process_msg_events_cached_channel(new_message, ch_num)
+                        if this_channel:
+                            # still have to do this when scrolled far up, only to handle message delete/edit/react/poll
+                            self.process_msg_events_active_channel(new_message, selected_line, latest_chat=False)
                     # handle unseen and mentions
                     if not this_channel or (this_channel and (self.new_unreads or self.ping_this_channel or self.tui.disable_drawing or self.tui.is_window_open())):
                         self.process_msg_events_other_channels(new_message)
@@ -7524,7 +7530,7 @@ class Endcord:
             # check if assist is needed
             assist_word, assist_type = self.tui.get_assist()
             if assist_type and not self.uploading:
-                if assist_type == 100:   # or (" " in assist_word and assist_type not in (5, 6)):
+                if assist_type == 100:   # esc or (" " in assist_word and assist_type not in (5, 6)):
                     self.stop_assist()
                 elif assist_type == 6:   # app commands
                     if assist_word != self.assist_word and not (self.disable_sending or self.forum):

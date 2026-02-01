@@ -9,7 +9,7 @@ assignees: ''
 
 <!-- Before submitting an issue, make sure that it is present in the latest version, and that issue is not already open.-->
 <!-- If some keybinding is not working, run keybinding resolver (endcord -k) and copy returned code to config in keybinding section to desired action.-->
-
+<!-- Do not report bugs related to custom hosts.-->
 **Describe the bug**
 A clear and concise description of what the bug is.
 

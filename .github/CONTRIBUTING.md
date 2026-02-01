@@ -163,6 +163,7 @@ user/flags - missing
 /interaction - should be removed if its `null`  
 /mentions/username - missing  
 /embeds/type - missing  
+/edited_timestamp - missing for some messages
 
 - `READY`:  
 /merged_members/id - should be /merged_members/user_id  

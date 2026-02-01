@@ -241,7 +241,7 @@ def prepare_message(message):
         "channel_id": message["channel_id"],
         "guild_id": message.get("guild_id"),
         "timestamp": message["timestamp"],
-        "edited": bool(message["edited_timestamp"]),
+        "edited": bool(message.get("edited_timestamp")),   # spacebar_fix - get
         "content": message["content"],
         "mentions": mentions,
         "mention_roles": message["mention_roles"],

@@ -136,7 +136,7 @@ def search_channels_all(guilds, dms, query, full_input, limit=50, score_cutoff=1
     return sorted(results, key=lambda x: x[2], reverse=True)
 
 
-def search_usernames_roles(roles, query_results, guild_id, gateway, query, limit=50, score_cutoff=15):
+def search_usernames_roles(roles, query_results, guild_id, gateway, query, presences=[], limit=50, score_cutoff=15):
     """Search for usernames and roles"""
     results = []
     worst_score = score_cutoff
@@ -162,7 +162,13 @@ def search_usernames_roles(roles, query_results, guild_id, gateway, query, limit
                 member_name = f" ({member["name"]})"
             else:
                 member_name = ""
-            heapq.heappush(results, (f"{member["username"]}{member_name}", member["id"], score))
+            formatted = f"{member["username"]}{member_name}"
+            for presence in presences:
+                if presence["id"] == member["id"]:
+                    status = presence["status"].capitalize().replace("Dnd", "DnD")
+                    formatted += f" - {status}"
+                    break
+            heapq.heappush(results, (formatted, member["id"], score))
             if len(results) > limit:
                 heapq.heappop(results)
                 worst_score = results[0][2]

@@ -76,7 +76,6 @@ It is built with python and ncurses library, to deliver lightweight yet feature 
 - Channel chat caching
 - Remember last open channel and tree state
 - Proxy support
-- Can connect to spacebar
 - Profile manager for multiple accounts
 - Store token in system keyring
 - Experimental windowed mode with tray icon
@@ -377,10 +376,10 @@ You can toggle experimental mode bu running: `uv run build.py --experimental`.
 Then run endcord from source: `uv run main.py`.  
 After first run in experimental mode, extra config will be generated in endcord config path in file called `pgcurses.json`. More info in [configuration](configuration.md).
 
-### Spacebar and other custom hosts
-Connecting to [Spacebar](https://github.com/spacebarchat) or any other discord-like instance can be configured in `config.ini`. Set `custom_host = ` to preferred host domain, like `old.server.spacebar.chat`. Set to `None` to use default host (`discord.com`).  
-Then endcord will try to connect to that host instead discord. Token is different on different hosts!  
-Only connecting to spacebar instances is known to work, but endcord may crash at any time. Further, each host may have different spam filters, so **use at your own risk** still applies.
+### Custom hosts
+Connecting to other discord-like instance can be configured in `config.ini` by setting `custom_host = ` to preferred host domain. Set to `None` to use default host (`discord.com`) or use `--custom-host=` command argument.  
+Ebut endcord may crash at any time. Further, each host may have different spam filters, so **use at your own risk** still applies.  
+Wether endcord will work or crash depends on hosts api implementation, the more different from discord it is, greater is the rish of a crash.  If endcord crashes its hosts fault. Do not report bugs related to this.
 
 ### Termux
 Endcord does work under termux, but some keybindings dont (`Ctrl/Alt+Space`). It is recommended to rebind them in endcord config or use endcord in desktop environment (like `openbox`) in a terminal emulator with xterm256-colors (like `alacritty`) and with Termux:X11 app.  
