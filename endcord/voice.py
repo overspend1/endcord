@@ -120,7 +120,7 @@ class Gateway():
             self.client_port = struct.unpack_from(">H", data, 72)[0]
             logger.debug("Rceived IP discovery packet")
         except socket.timeout:
-            logger.error(f"Failed to receive IP discovery: timeout after {UDP_TIMEOUT}s")
+            logger.error(f"Failed to receive IP discovery: timeout after {UDP_TIMEOUT} s")
             self.disconnect()
 
 
@@ -286,7 +286,7 @@ class Gateway():
 
     def send_heartbeat(self):
         """Send heartbeat to voice gateway, will stop if response is not received, should be run in a thread"""
-        logger.info(f"Heartbeater started, interval={self.heartbeat_interval/1000}s")
+        logger.info(f"Heartbeater started, interval={self.heartbeat_interval/1000} s")
         self.heartbeat_received = True
         # wait for ready event for some time
         sleep_time = 0

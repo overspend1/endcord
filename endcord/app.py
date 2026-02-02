@@ -2409,7 +2409,7 @@ class Endcord:
 
                 elif self.slowmode_times.get(self.active_channel["channel_id"]):
                     self.restore_input_text = (input_text, "standard")
-                    self.update_extra_line(f"Slowmode is enabled, will be able to send message in {self.slowmode_times[self.active_channel["channel_id"]]}s")
+                    self.update_extra_line(f"Slowmode is enabled, will be able to send message in {self.slowmode_times[self.active_channel["channel_id"]]} s")
                     # dont allow sending messagee until it expires
 
                 elif not self.disable_sending and not self.forum:
@@ -7183,7 +7183,7 @@ class Endcord:
 
         self.execute_extensions_methods("on_main_start")
 
-        logger.info(f"Main loop started after {round(time.time() - self.init_time, 2)}s")
+        logger.info(f"Main loop started after {round((time.time() - self.init_time) * 1000, 3)} ms")
         del self.init_time
 
         while self.run:
@@ -7357,7 +7357,7 @@ class Endcord:
                     # check for slowmode
                     if slowmode_time and slowmode_time != 1 and self.active_channel["channel_id"] not in self.slowmode_times:
                         self.slowmode_times[self.active_channel["channel_id"]] = slowmode_time
-                        self.update_extra_line(f"Slowmode is enabled, will be able to send message in {slowmode_time}s")
+                        self.update_extra_line(f"Slowmode is enabled, will be able to send message in {slowmode_time} s")
                         if not self.slowmode_thread or not self.slowmode_thread.is_alive():
                             self.slowmode_thread = threading.Thread(target=self.wait_slowmode, daemon=True, args=())
                             self.slowmode_thread.start()

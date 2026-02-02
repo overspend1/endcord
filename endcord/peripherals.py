@@ -931,10 +931,14 @@ class SpellCheck():
         self.proc = pexpect.popen_spawn.PopenSpawn(f"{self.aspell_path} -a --sug-mode={self.aspell_mode} --lang={self.aspell_language}", encoding="utf-8")
         self.proc.delaybeforesend = None
         try:
-            self.proc.expect("Ispell", timeout=0.5)
-            logger.info("Aspell initialized")
+            start = time.time()
+            self.proc.expect("Ispell", timeout=1)
+            logger.info(f"Aspell initialized in {round((time.time() - start)*1000, 3)} ms")
         except pexpect.exceptions.EOF:
-            logger.info("Aspell initialization error")
+            logger.info("Aspell initialization %s", "error")
+            self.enable = False
+        except pexpect.exceptions.TIMEOUT:
+            logger.info("Aspell initialization %s", "timed out")
             self.enable = False
 
 

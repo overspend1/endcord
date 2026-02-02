@@ -745,7 +745,7 @@ class Gateway():
                                     "message_id": thread.get("last_message_id", 0),   # really last message id
                                     "channel_id": thread["id"],
                                 })
-                    time_log_string += f"    guilds - {round((time.time() - ready_time_start) * 1000, 3)}ms\n"
+                    time_log_string += f"    guilds - {round((time.time() - ready_time_start) * 1000, 3)} ms\n"
                     ready_time_mid = time.time()
                     # DM channels
                     for dm in data["private_channels"]:
@@ -761,7 +761,7 @@ class Gateway():
                         dm.pop("last_message_id")
                     for dm in self.dms:
                         self.dms_id.append(dm["id"])
-                    time_log_string += f"    DMs - {round((time.time() - ready_time_mid) * 1000, 3)}ms\n"
+                    time_log_string += f"    DMs - {round((time.time() - ready_time_mid) * 1000, 3)} ms\n"
                     ready_time_mid = time.time()
                     # unread messages and pings
                     for channel in double_get(data, "read_state", "entries", default=[]):
@@ -783,7 +783,7 @@ class Gateway():
                             if not last_message_id or int(unseen_channel["last_acked_message_id"]) < int(last_message_id):
                                 unseen_channel["last_acked_unreads_line"] = unseen_channel["last_acked_message_id"]
                             self.read_state[channel_id] = unseen_channel
-                    time_log_string += f"    read state ({len(self.read_state)} channels) - {round((time.time() - ready_time_mid) * 1000, 3)}ms\n"
+                    time_log_string += f"    read state ({len(self.read_state)} channels) - {round((time.time() - ready_time_mid) * 1000, 3)} ms\n"
                     ready_time_mid = time.time()
                     # guild and dm settings
                     for guild in double_get(data, "user_guild_settings", "entries", default=[]):
@@ -818,12 +818,12 @@ class Gateway():
                                 })
                     self.process_hidden_channels()
                     self.guilds_changed = True
-                    time_log_string += f"    channel settings - {round((time.time() - ready_time_mid) * 1000, 3)}ms\n"
+                    time_log_string += f"    channel settings - {round((time.time() - ready_time_mid) * 1000, 3)} ms\n"
                     ready_time_mid = time.time()
                     for user in data["relationships"]:
                         if user["type"] == 2 or user.get("user_ignored"):
                             self.blocked.append(user["id"])
-                    time_log_string += f"    blocked users - {round((time.time() - ready_time_mid) * 1000, 3)}ms\n"
+                    time_log_string += f"    blocked users - {round((time.time() - ready_time_mid) * 1000, 3)} ms\n"
                     ready_time_mid = time.time()
                     # get user settings
                     if "user_settings_proto" in data and not self.legacy:
@@ -844,7 +844,7 @@ class Gateway():
                         if old_user_settings.get("custom_status"):
                             self.user_settings_proto["status"]["customStatus"] = old_user_settings["custom_status"]
                     self.proto_changed = True
-                    time_log_string += f"    protobuf - {round((time.time() - ready_time_mid) * 1000, 3)}ms\n"
+                    time_log_string += f"    protobuf - {round((time.time() - ready_time_mid) * 1000, 3)} ms\n"
                     ready_time_mid = time.time()
                     # get my roles
                     if self.guilds:
@@ -858,15 +858,15 @@ class Gateway():
                                 "guild_id": guild_id,
                                 "roles": roles,
                             })
-                    time_log_string += f"    roles - {round((time.time() - ready_time_mid) * 1000, 3)}ms\n"
+                    time_log_string += f"    roles - {round((time.time() - ready_time_mid) * 1000, 3)} ms\n"
                     ready_time_mid = time.time()
                     # write debug data
                     if logger.getEffectiveLevel() == logging.DEBUG:
                         debug.save_json(debug.anonymize_guilds(self.guilds), "guilds.json")
                     # blocked users
-                    time_log_string += f"    debug data - {round((time.time() - ready_time_mid) * 1000, 3)}ms\n"
+                    time_log_string += f"    debug data - {round((time.time() - ready_time_mid) * 1000, 3)} ms\n"
                     self.ready = True
-                    time_log_string += f"    total - {round((time.time() - ready_time_start) * 1000, 3)}ms"
+                    time_log_string += f"    total - {round((time.time() - ready_time_start) * 1000, 3)} ms"
                     logger.debug(time_log_string)
                     # READY is huge so lets save some memory
                     del (response, data, guild, guild_channels, role, guild_roles, last_messages, time_log_string)
@@ -1662,7 +1662,7 @@ class Gateway():
 
     def send_heartbeat(self):
         """Send heartbeat to gateway, if response is not received, triggers reconnect, should be run in a thread"""
-        logger.debug(f"Heartbeater started, interval={self.heartbeat_interval/1000}s")
+        logger.debug(f"Heartbeater started, interval={self.heartbeat_interval/1000} s")
         self.heartbeat_running = True
         self.heartbeat_received = True
         # wait for ready event for some time

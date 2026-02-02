@@ -690,7 +690,7 @@ def manage_profile(screen, have_keyring, config, editing_profile=None):
                     break
                 state = gateway_auth.get_state()
                 timeout = gateway_auth.get_remaining_time()
-                timeout_text = f"Session will timeout in: {f"{(timeout) // 60}m {timeout % 60}s"}"
+                timeout_text = f"Session will timeout in: {f"{(timeout) // 60}m {timeout % 60} s"}"
                 if state != 1 and drawing:
                     terminal_utils.stop_esc_detector()
                     terminal_utils.leave_tui()
