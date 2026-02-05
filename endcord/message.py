@@ -72,8 +72,8 @@ def prepare_embeds(embeds, message_content):
 
         content = content.strip("\n")
         if content:
-            if content in message_content:
-                message_content = message_content.replace(content, "")
+            if content == message_content:
+                message_content = ""
             ready_data = {
                 "type": embed_type,   # spacebar_fix - get
                 "name": None,

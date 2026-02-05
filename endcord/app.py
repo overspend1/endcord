@@ -5292,20 +5292,20 @@ class Endcord:
         else:
             return messages
         for message_c in this_channel_cache:
-            message_c_id = message_c["id"]
+            message_c_id = int(message_c["id"])
             # ids are discord snowflakes containing unix time so it can be used as message sent time
-            if message_c_id < messages[-1]["id"]:
+            if message_c_id < int(messages[-1]["id"]):
                 # if message_c date is before last message date
                 continue
-            if message_c_id > messages[0]["id"]:
+            if message_c_id > int(messages[0]["id"]):
                 # if message_c date is after first message date
-                if messages[0]["id"] >= self.last_message_id:
+                if int(messages[0]["id"]) >= self.last_message_id:
                     # if it is not scrolled up
                     messages.insert(0, message_c)
                 continue
             for num, message in enumerate(messages):
                 try:
-                    if message["id"] > message_c_id > messages[num+1]["id"]:
+                    if int(message["id"]) > message_c_id > int(messages[num+1]["id"]):
                         # if message_c date is between this and next message dates
                         messages.insert(num+1, message_c)
                         break

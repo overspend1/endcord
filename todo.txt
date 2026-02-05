@@ -1,19 +1,18 @@
-Add gray background to mentions, channels and emoji
-    collect mention_ranges
-    collect channel_ranges (include channel and msg url)
-    collect custom_emoji_ranges
-    move all in iterations
-    merge all with code_snippets into gray_ranges
-    include gray_ranges in chat_format
-    include other ranges in chat_map
-
 Add ability to open custom emoji with media player
+    include emoji_ranges, mention_ranges and channel_ranges in chat_map
+        collect all ranges in onle place ???
+        include urls_this_line and spoilers_this_line
     double click
     command
 Add ability to double click on mentions
+    include user id in mention_ranges in chat map
+    double click
+    add command
 Add ability to double click on channel in chat
-
-Investigate read state reverting after reconnect
+    include channel id in channel_ranges in chat map
+    double click
+    update old command logic
+Update screenshots
 
 Vim-like bindings
     have input mode - type in input line
@@ -42,6 +41,7 @@ after fixing https://github.com/python/cpython/issues/119138
     Show inline media in chat
     Add bg color for mentions and channels in chat
 
+Investigate read state reverting after reconnect
 Add webhook and app sign to message
 Add option to select individual message
 Add scrollbar to chat

@@ -84,7 +84,7 @@ def main(args):
         from endcord import color
         if uses_pgcurses:
             curses.enable_tray = False
-        curses.wrapper(color.color_palette)
+        color.color_palette()
         sys.exit(0)
     elif args.keybinding:
         from endcord import keybinding

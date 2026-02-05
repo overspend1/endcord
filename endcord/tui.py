@@ -206,8 +206,10 @@ class TUI():
         print("\x1b[?2004h")   # enable bracketed paste mode
         screen.clear()
         self.last_free_id = 1   # last free color pair id
+        self.color_pairs = {}
         self.attrib_map = [0]   # has 0 so its index starts from 1 to be matched with color pairs
         tree_bg = config["color_tree_default"][1]
+        self.protected_colors = 21   # first N colors that must not be reused
         self.init_pair((255, -1))   # white on default
         self.init_pair((233, 255))   # black on white
         self.init_pair(config["color_tree_default"])   # 3
@@ -1851,6 +1853,7 @@ class TUI():
                 attribute = curses.A_ITALIC
             else:
                 attribute = 0
+
         if fg > curses.COLORS:
             fg = -1
         if bg > curses.COLORS:
@@ -1863,6 +1866,13 @@ class TUI():
             curses.init_pair(force_id, fg, bg)
             self.attrib_map = set_list_item(self.attrib_map, attribute, force_id)
             return force_id
+
+        # 255_curses_bug - reusing same pairs to save ids
+        key = (fg & 0x1FF) | ((bg & 0x1FF) << 9) | (attribute << 18)
+        if key in self.color_pairs and self.last_free_id > self.protected_colors:
+            return self.color_pairs[key]
+        self.color_pairs[key] = self.last_free_id
+
         curses.init_pair(self.last_free_id, fg, bg)
         self.attrib_map.append(attribute)
         self.last_free_id += 1
@@ -1882,7 +1892,7 @@ class TUI():
 
 
     def init_colors_formatted(self, colors, alt_color):
-        """Initialize multiple color pairs in double nested lists twice, one wih normal color and one bg from with alt_color"""
+        """Initialize multiple color pairs in double nested lists twice, one with normal color and one bg from with alt_color"""
         color_codes = []
         for format_colors in colors:
             format_codes = []
@@ -1894,10 +1904,12 @@ class TUI():
                 format_codes.append([pair_id, *color[3:]])
             color_codes.append(format_codes)
         # using bg from alt_color
-        for format_colors in colors:
+        for num_f, format_colors in enumerate(colors):
             format_codes = []
             for num, color in enumerate(format_colors):
                 if num == 0:
+                    if num_f not in (2, 3):   # skip fg update for color_format_reply and color_format_reactions
+                        color[0] = alt_color[0]
                     color[1] = alt_color[1]
                 if color[1] == -2:
                     color[1] = format_colors[0][1]

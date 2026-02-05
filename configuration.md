@@ -297,7 +297,7 @@ First `[fg, bg, attr]` is base color for whole context. If `bg` is -1, `bg` from
 Every next list has additional `start` and `end`- indexes on a line where color is applied. If `bg` is -2, `bg` from base color is used. -1 is terminal default color. Same for `fg`.  
 - `color_default = [-1, -1]`  
     Base color formatting for text. No attribute.
-- `color_chat_mention = [209, 234]`  
+- `color_chat_mention = [223, 234]`  
     Color for highlighted messages containing mentions (reply with ping included) and mention roles.
 - `color_chat_blocked = [242, -1]`  
     Color for blocked messages if `block_mode = 1`.
@@ -343,6 +343,8 @@ Every next list has additional `start` and `end`- indexes on a line where color 
     Color format for message reactions string. Corresponding to `format_reactions`.
 - `color_format_forum = [[-1, -1], [242, -2, 0, 0, 12], [25, -2, 0, 15, 20]]`  
     Color format for threads in forum. Corresponding to `format_forum`.
+- `color_chat_standout = [153, 234]`  
+    Color for chat elements that should standout, like `@mentons`, `#channels`, timestamps, custom emoji.
 - `color_chat_edited = [241, -1]`  
     Color for `edited_string`.
 - `color_chat_url = [153, -1, "u"]`  
