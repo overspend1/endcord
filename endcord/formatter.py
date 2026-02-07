@@ -354,18 +354,18 @@ def normalize_string_with_suffix(input_string, suffix, max_length, emoji_safe=Fa
 def shift_ranges(ranges_lists, index, diff):
     """Range shifter for chained replace_ functions"""
     for ranges in ranges_lists:
-        for r in ranges:
-            if r[0] >= index:
-                r[0] += diff
-                r[1] += diff
+        for format_range in ranges:
+            if format_range[0] >= index:
+                format_range[0] += diff
+                format_range[1] += diff
 
 
 def shift_ranges_all(diff, *ranges_lists):
     """Shifter for chat format ranges"""
     for ranges in ranges_lists:
-        for r in ranges:
-            r[0] += diff
-            r[1] += diff
+        for format_range in ranges:
+            format_range[0] += diff
+            format_range[1] += diff
 
 
 def replace_discord_emoji(text, *ranges_lists):
@@ -385,7 +385,7 @@ def replace_discord_emoji(text, *ranges_lists):
 
         new_start = start + offset
         new_end = new_start + len(new_text)
-        emoji_ranges.append([new_start, new_end])
+        emoji_ranges.append([new_start, new_end, match.group(3)])
 
         diff = len(new_text) - (end - start)
         if diff != 0:
@@ -409,8 +409,9 @@ def replace_mentions(text, usernames_ids, *ranges_lists, global_name=False, use_
     for match in re.finditer(match_mention, text):
         start, end = match.span()
         result.append(text[last_pos:start])
+        user_id = match.group(1)
         for user in usernames_ids:
-            if match.group(1) == user["id"]:
+            if user_id == user["id"]:
                 new_text = f"@{get_global_name(user, use_nick) if global_name else user["username"]}"
                 break
         else:
@@ -419,7 +420,7 @@ def replace_mentions(text, usernames_ids, *ranges_lists, global_name=False, use_
 
         new_start = start + offset
         new_end = new_start + len(new_text)
-        mention_ranges.append([new_start, new_end])
+        mention_ranges.append([new_start, new_end, user_id])
 
         diff = len(new_text) - (end - start)
         if diff != 0:
@@ -454,7 +455,7 @@ def replace_roles(text, roles_ids, *ranges_lists):
 
         new_start = start + offset
         new_end = new_start + len(new_text)
-        role_ranges.append([new_start, new_end])
+        role_ranges.append([new_start, new_end])   # dont mix role and user ids
 
         diff = len(new_text) - (end - start)
         if diff != 0:
@@ -469,7 +470,6 @@ def replace_roles(text, roles_ids, *ranges_lists):
 def replace_discord_url(text, *ranges_lists):
     """Replace discord url for channel and message and shifts ranges for other range lists."""
     result = []
-    channel_ranges = []
     last_pos = 0
     offset = 0
     for match in re.finditer(match_discord_channel_url, text):
@@ -480,19 +480,16 @@ def replace_discord_url(text, *ranges_lists):
         else:
             new_text = f"<#{match.group(2)}>"
         result.append(new_text)
-
-        new_start = start + offset
-        new_end = new_start + len(new_text)
-        channel_ranges.append([new_start, new_end])
+        # range is added in replace_channels()
 
         diff = len(new_text) - (end - start)
         if diff != 0:
-            shift_ranges(ranges_lists, new_start, diff)
+            shift_ranges(ranges_lists, start + offset, diff)
         offset += diff
         last_pos = end
 
     result.append(text[last_pos:])
-    return "".join(result), channel_ranges
+    return "".join(result)
 
 
 def replace_channels(text, channels_ids, *ranges_lists):
@@ -508,8 +505,9 @@ def replace_channels(text, channels_ids, *ranges_lists):
     for match in re.finditer(match_channel, text):
         start, end = match.span()
         result.append(text[last_pos:start])
+        channel_id = match.group(1)
         for channel in channels_ids:
-            if match.group(1) == channel["id"]:
+            if channel_id == channel["id"]:
                 new_text = "#" + channel["name"]
                 break
         else:
@@ -518,7 +516,7 @@ def replace_channels(text, channels_ids, *ranges_lists):
 
         new_start = start + offset
         new_end = new_start + len(new_text)
-        channel_ranges.append([new_start, new_end])
+        channel_ranges.append([new_start, new_end, channel_id])
 
         diff = len(new_text) - (end - start)
         if diff != 0:
@@ -753,21 +751,22 @@ def format_multiline_one_line_end(formats_range, line_len, newline_len, color, e
     return line_format
 
 
-def urls_multiline_one_line(urls_range, line_len, newline_len, quote=False):
-    """Generate ranges of urls for one line"""
+def ranges_multiline_one_line(ranges, line_len, newline_len, quote=False):
+    """Generate ranges for one line"""
     line_ranges = []
-    for num, url_range in enumerate(urls_range):
-        if url_range[0] >= line_len or url_range[1] < newline_len:
+    have_id = ranges and len(ranges[0]) >= 3
+    for num, format_range in enumerate(ranges):
+        if format_range[0] >= line_len or format_range[1] < newline_len:
             continue
-        if url_range[0] >= newline_len:
-            if url_range[1] < line_len:
-                line_ranges.append([url_range[0], url_range[1], num])
+        if format_range[0] >= newline_len:
+            if format_range[1] < line_len:
+                line_ranges.append([format_range[0], format_range[1], format_range[2] if have_id else num])
             else:
-                line_ranges.append([url_range[0], line_len, num])
-        elif url_range[1] < line_len:
-            line_ranges.append([newline_len + quote*2, url_range[1], num])
+                line_ranges.append([format_range[0], line_len, format_range[2] if have_id else num])
+        elif format_range[1] < line_len:
+            line_ranges.append([newline_len + quote*2, format_range[1], format_range[2] if have_id else num])
         else:
-            line_ranges.append([newline_len + quote*2, line_len, num])
+            line_ranges.append([newline_len + quote*2, line_len, format_range[2] if have_id else num])
     return line_ranges
 
 
@@ -982,7 +981,9 @@ def generate_chat(messages, roles, channels, max_length, my_id, my_roles, member
 
     chat = []
     chat_format = []
-    chat_map = []   # ((num, username:(st, end), is_reply, reactions:((st, end), ...), date:(st, end), url:(st, end, index)), ...)
+    # chat map = ((num, username:(st, end), is_reply, reactions:((st, end), ...), date:(st, end), ranges), ...)
+    # ranges = (url:(st, end, index), spoiler:(st, end, index), emoji:(st, end, id), mentions:(st, end, id), channels:(st, end, id))
+    chat_map = []
     wide_map = []
     len_edited = len(edited_string)
     enable_separator = format_date and date_separator
@@ -1115,7 +1116,7 @@ def generate_chat(messages, roles, channels, max_length, my_id, my_roles, member
                 if message_spacing:
                     temp_chat.append(" " * max_length)
                     temp_format.append([color_base])
-                    temp_chat_map.append((None, None, None, None, None, None, None))
+                    temp_chat_map.append((None, None, None, None, None, None))
                 # keep text always in center
                 filler = max_length - 3
                 filler_l = filler // 2
@@ -1184,7 +1185,7 @@ def generate_chat(messages, roles, channels, max_length, my_id, my_roles, member
                     content, _ = replace_discord_emoji(content)
                     content, _ = replace_mentions(content, ref_message["mentions"], global_name=use_global_name, use_nick=use_nick)
                     content, _ = replace_roles(content, roles)
-                    content, _ = replace_discord_url(content)
+                    content = replace_discord_url(content)
                     content, _ = replace_channels(content, channels)
                     content, _ = replace_timestamps(content, convert_timezone)
                 if reply_embeds:
@@ -1222,7 +1223,7 @@ def generate_chat(messages, roles, channels, max_length, my_id, my_roles, member
                 temp_format.append(color_mention_reply)
             else:
                 temp_format.append(color_reply)
-            temp_chat_map.append((num, None, True, None, None, None, None))
+            temp_chat_map.append((num, None, True, None, None, None))
 
         # bot interaction
         elif message["interaction"]:
@@ -1242,7 +1243,7 @@ def generate_chat(messages, roles, channels, max_length, my_id, my_roles, member
                 temp_format.append(color_mention_reply)
             else:
                 temp_format.append(color_reply)
-            temp_chat_map.append((num, None, 2, None, None, None, None))
+            temp_chat_map.append((num, None, 2, None, None, None))
 
         # main message
         quote = False
@@ -1258,9 +1259,8 @@ def generate_chat(messages, roles, channels, max_length, my_id, my_roles, member
             content, mention_ranges = replace_mentions(content, message["mentions"], emoji_ranges, global_name=use_global_name, use_nick=use_nick)
             content, role_ranges = replace_roles(content, roles, emoji_ranges, mention_ranges)
             mention_ranges += role_ranges
-            content, channel_ranges = replace_discord_url(content, emoji_ranges, mention_ranges)
-            content, channel_ranges_2 = replace_channels(content, channels, emoji_ranges, mention_ranges, channel_ranges)
-            channel_ranges += channel_ranges_2
+            content = replace_discord_url(content, emoji_ranges, mention_ranges)
+            content, channel_ranges = replace_channels(content, channels, emoji_ranges, mention_ranges)
             content, timestamp_ranges = replace_timestamps(content, convert_timezone, emoji_ranges, mention_ranges, channel_ranges)
             shift_ranges_all(
                 pre_content_len,
@@ -1430,9 +1430,13 @@ def generate_chat(messages, roles, channels, max_length, my_id, my_roles, member
         if wide:
             temp_wide_map.append(len(temp_chat))
         temp_chat.append(message_line)
-        urls_this_line = urls_multiline_one_line(urls, newline_index+1, 0, quote)
-        spoilers_this_line = urls_multiline_one_line(spoilers, newline_index+1, 0, quote)
-        temp_chat_map.append((num, (pre_name_len, end_name), False, None, timestamp_range, urls_this_line, spoilers_this_line))
+        urls_this_line = ranges_multiline_one_line(urls, newline_index+1, 0, quote)
+        spoilers_this_line = ranges_multiline_one_line(spoilers, newline_index+1, 0, quote)
+        emoji_this_line = ranges_multiline_one_line(emoji_ranges, newline_index+1, 0, quote)
+        mentions_this_line = ranges_multiline_one_line(mention_ranges, newline_index+1, 0, quote)
+        channels_this_line = ranges_multiline_one_line(channel_ranges, newline_index+1, 0, quote)
+        this_line_ranges = (urls_this_line, spoilers_this_line, emoji_this_line, mentions_this_line, channels_this_line)
+        temp_chat_map.append((num, (pre_name_len, end_name), False, None, timestamp_range, this_line_ranges))
 
         # formatting
         len_message_line = len(message_line)
@@ -1553,9 +1557,13 @@ def generate_chat(messages, roles, channels, max_length, my_id, my_roles, member
             if wide:
                 temp_wide_map.append(len(temp_chat))
             temp_chat.append(new_line)
-            urls_this_line = urls_multiline_one_line(urls, len_new_line, newline_len, quote)
-            spoilers_this_line = urls_multiline_one_line(spoilers, len_new_line, newline_len, quote)
-            temp_chat_map.append((num, None, None, None, None, urls_this_line, spoilers_this_line))
+            urls_this_line = ranges_multiline_one_line(urls, len_new_line, newline_len, quote)
+            spoilers_this_line = ranges_multiline_one_line(spoilers, len_new_line, newline_len, quote)
+            emoji_this_line = ranges_multiline_one_line(emoji_ranges, len_new_line, newline_len, quote)
+            mentions_this_line = ranges_multiline_one_line(mention_ranges, len_new_line, newline_len, quote)
+            channels_this_line = ranges_multiline_one_line(channel_ranges, len_new_line, newline_len, quote)
+            this_line_ranges = (urls_this_line, spoilers_this_line, emoji_this_line, mentions_this_line, channels_this_line)
+            temp_chat_map.append((num, None, None, None, None, this_line_ranges))
 
             # formatting
             if disable_formatting:
@@ -1616,7 +1624,7 @@ def generate_chat(messages, roles, channels, max_length, my_id, my_roles, member
             for reaction in reactions:
                 reactions_map.append([pre_reaction_len + offset, pre_reaction_len + len(reaction) + offset])
                 offset += len(reactions_separator) + len(reaction)
-            temp_chat_map.append((num, None, False, reactions_map, None, None, None))
+            temp_chat_map.append((num, None, False, reactions_map, None, None))
 
         # invert message lines order and append them to chat
         # it is inverted because chat is drawn from down to upside
@@ -2217,7 +2225,7 @@ def generate_extra_window_search(messages, roles, channels, blocked, total_msg, 
                 content, _ = replace_discord_emoji(content)
                 content, _ = replace_mentions(content, message["mentions"], global_name=use_global_name, use_nick=use_nick)
                 content, _ = replace_roles(content, roles)
-                content, _ = replace_discord_url(content)
+                content = replace_discord_url(content)
                 content, _ = replace_channels(content, channels)
                 content, _ = replace_timestamps(content, convert_timezone)
 
@@ -2461,7 +2469,7 @@ def generate_message_notification(data, channels, roles, guild_name, convert_tim
         body, _ = replace_discord_emoji(body)
         body, _ = replace_mentions(body, data["mentions"], global_name=use_global_name, use_nick=use_nick)
         body, _ = replace_roles(body, roles)
-        body, _ = replace_discord_url(body)
+        body = replace_discord_url(body)
         body, _ = replace_channels(body, channels)
         body, _ = replace_timestamps(body, convert_timezone)
     elif data.get("embeds"):

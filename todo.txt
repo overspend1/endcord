@@ -1,15 +1,10 @@
 Add ability to open custom emoji with media player
-    include emoji_ranges, mention_ranges and channel_ranges in chat_map
-        collect all ranges in onle place ???
-        include urls_this_line and spoilers_this_line
     double click
     command
 Add ability to double click on mentions
-    include user id in mention_ranges in chat map
     double click
     add command
 Add ability to double click on channel in chat
-    include channel id in channel_ranges in chat map
     double click
     update old command logic
 Update screenshots

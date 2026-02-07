@@ -1209,7 +1209,7 @@ class TUI():
             except curses.error:
                 # exception will happen when window is resized to smaller w dimensions
                 if not self.disable_drawing:
-                    self.resize()
+                    pass   # some other draw function will call self.resize() 
 
 
     def draw_title_tree(self):
@@ -1908,7 +1908,8 @@ class TUI():
             format_codes = []
             for num, color in enumerate(format_colors):
                 if num == 0:
-                    if num_f not in (2, 3):   # skip fg update for color_format_reply and color_format_reactions
+                    # skip fg update for color_format_reply, color_format_reactions, color_chat_edited, color_chat_url
+                    if num_f not in (2, 3, 4, 5):
                         color[0] = alt_color[0]
                     color[1] = alt_color[1]
                 if color[1] == -2:

@@ -2153,7 +2153,6 @@ class Endcord:
                     )))
                     self.download_threads[-1].start()
 
-
             # escape in main UI
             elif action == 5:
                 if self.recording:
@@ -2201,6 +2200,7 @@ class Endcord:
                     self.restore_input_text = (input_text, "standard")
                     command_type, command_args = parser.command_string(action[1])
                     self.execute_command(command_type, command_args, action[1], chat_sel, tree_sel)
+                    self.assist_word = None
 
             # media controls   # handled externally in media.py as curses is fully paused
             # elif action >= 100:
@@ -2337,6 +2337,7 @@ class Endcord:
                     command_type, command_args = parser.command_string(input_text)
                     self.close_extra_window()
                     self.execute_command(command_type, command_args, input_text, chat_sel, tree_sel)
+                    self.assist_word = None
                     self.add_to_command_history(input_text)
                     self.command = False
                     continue
@@ -5205,6 +5206,7 @@ class Endcord:
                     )
                     self.add_to_command_history(input_text)
                     self.command = False
+                    self.assist_word = None
                     return "", 1000000   # means its command execution and should restore text from store
                 new_text = self.assist_found[index][1] + " "
                 new_pos = len(new_text)
