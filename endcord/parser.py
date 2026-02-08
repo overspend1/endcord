@@ -374,8 +374,8 @@ def command_string(text):
     elif text_lower.startswith("bottom"):
         cmd_type = 2
 
-    # 3 - GO_REPLY
-    elif text_lower.startswith("go_reply"):
+    # 3 - GOTO_REPLY
+    elif text_lower.startswith("goto_reply"):
         cmd_type = 3
 
     # 4 - DOWNLOAD
@@ -761,11 +761,12 @@ def command_string(text):
     # 57 - VIEW_EMOJI
     elif text_lower.startswith("view_emoji"):
         cmd_type = 57
-        name = text[11:].strip(" ")
-        if name:
+        try:
+            num = int(text.split(" ")[1])
+            cmd_args = {"num": num}
+        except (IndexError, ValueError):
+            name = text[11:].strip(" ")
             cmd_args = {"name": name}
-        else:
-            cmd_type = 0
 
     # 58 - QUIT
     elif text_lower.split(" ")[0] == "quit":

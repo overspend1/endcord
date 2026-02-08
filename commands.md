@@ -33,8 +33,6 @@
     Copy link of selected channel in tree to clipboard, or from provided channel id.
 - `link_message`  
     Copy link of selected message to clipboard,
-- `goto_mention` / `goto_mention [num]`  
-    Go to channel/message mentioned in selected message.
 - `cancel`  
     Prompt to cancel all downloads and uploads.
 - `external_edit`  
@@ -47,7 +45,7 @@
     Join/Leave selected thread in tree.
 - `bottom`  
     Go to chat bottom.
-- `go_reply`  
+- `goto_reply`  
     Go to message that selected message is replying to.
 - `show_reactions`  
     Show reactions details for selected message.
@@ -107,8 +105,10 @@
     Unblock user. `ignore` is optional.
 - `toggle_blocked_messages`  
     Toggle showing messages from blocked users in chat. Toggles between `blocked_mode` setting and fully shown messages.
-- `view_emoji [emoji]`  
-    Download specified custom emoji and show it in media player.
+- `view_emoji *[emoji/num]`  
+    Download specified custom emoji and show it in media player. If number or nothing is specified it will show emoji from selected line in chat.
+- `goto_mention` / `goto_mention [num]`  
+    Go to channel/message mentioned in selected message.
 - `voice_start_call`  
     Start voice call in currently open DM.
 - `voice_accept_call`  

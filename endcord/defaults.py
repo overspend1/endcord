@@ -204,7 +204,6 @@ keybindings = {
     "profile_info": "ALT+112",   # Alt+P
     "show_summaries": "ALT+115",   # Alt+S
     "copy_message_link": "ALT+117",   # Alt+U
-    "go_channel": "ALT+103",   # Alt+G
     "add_reaction": "ALT+114",   # Alt+R
     "search_gif": "ALT+102",   # Alt+F
     "show_reactions": "ALT+119",   # Alt+W

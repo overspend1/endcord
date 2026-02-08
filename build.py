@@ -10,6 +10,8 @@ import subprocess
 import sys
 import tomllib
 
+PYTHON_MAX_MINOR = 13
+
 
 def get_app_name():
     """Get app name from pyproject.toml"""
@@ -18,10 +20,10 @@ def get_app_name():
             data = tomllib.load(f)
         if "project" in data and "version" in data["project"]:
             return str(data["project"]["name"])
-        print("App name not specified in pyproject.toml")
-        sys.exit()
-    print("pyproject.toml file not found")
-    sys.exit()
+        print("App name not specified in pyproject.toml", file=sys.stderr)
+        sys.exit(1)
+    print("pyproject.toml file not found", file=sys.stderr)
+    sys.exit(1)
 
 
 def get_version_number():
@@ -31,10 +33,19 @@ def get_version_number():
             data = tomllib.load(f)
         if "project" in data and "version" in data["project"]:
             return str(data["project"]["version"])
-        print("Version not specified in pyproject.toml")
-        sys.exit()
-    print("pyproject.toml file not found")
-    sys.exit()
+        print("Version not specified in pyproject.toml", file=sys.stderr)
+        sys.exit(1)
+    print("pyproject.toml file not found", file=sys.stderr)
+    sys.exit(1)
+
+
+def get_python_version():
+    """Get python major and minor versions"""
+    version_result = subprocess.run(["uv", "run", "python", "--version"], capture_output=True, text=True, check=True)
+    parts = version_result.stdout.strip().replace("Python ", "").split(".")
+    if len(parts) < 2:
+        return None
+    return int(parts[0]), int(parts[1])
 
 
 def supports_color():
@@ -61,6 +72,48 @@ def fprint(text, color_code="\033[1;35m", prepend=f"[{PKGNAME.capitalize()} Buil
         print(f"{color_code}{prepend}{text}\033[0m")
     else:
         print(f"{prepend}{text}")
+
+
+def check_python():
+    """Check python version and print warning, and return True if runing inside pure python (no uv)"""
+    if sys.version_info.major != 3:
+        print(f"Python {sys.version_info.major} is not supported. Only Python 3 is supported.", file=sys.stderr)
+        sys.exit(1)
+
+    if os.environ.get("UV", ""):
+        if sys.version_info.minor < 12 or sys.version_info.minor > PYTHON_MAX_MINOR:
+            fprint(f'WARNING: Python {sys.version_info.major}.{sys.version_info.minor} is not supported but build may succeed. Run "python build.py" to let uv download and setup recommended temporary python interpreter.', color_code="\033[1;31m")
+        else:
+            try:
+                version = subprocess.run(["uv", "--version"], capture_output=True, text=True, check=True)
+                fprint(f"Using {version.stdout.strip()}")
+            except Exception:
+                pass
+            fprint(f"Using Python {sys.version}")
+        return False
+
+    try:
+        version = subprocess.run(["uv", "--version"], capture_output=True, text=True, check=True)
+    except subprocess.CalledProcessError as e:
+        print(f"uv error: {e}", file=sys.stderr)
+        sys.exit(1)
+    except FileNotFoundError:
+        print("uv command not found, please ensure uv is installed and in PATH", file=sys.stderr)
+        sys.exit(1)
+    return True
+
+
+def ensure_python():
+    """Check current python and download correct python if needed"""
+    if sys.version_info.minor >= 12 and sys.version_info.minor <= PYTHON_MAX_MINOR:
+        return None
+    _, minor = get_python_version()
+    if minor >= 12 and minor <= PYTHON_MAX_MINOR:
+        return None
+    version = f"3.{PYTHON_MAX_MINOR}"
+    fprint(f"Setting up python {version} for this project")
+    subprocess.run(["uv", "python", "install", version], check=True)
+    return version
 
 
 def check_media_support():
@@ -485,12 +538,12 @@ def build_with_pyinstaller(onedir, nosoundcard, print_cmd=False):
     cmd = [arg for arg in cmd if arg != ""]
     if print_cmd:
         print(" ".join(cmd))
-        sys.exit()
+        sys.exit(0)
     fprint("Starting pyinstaller")
     try:
         subprocess.run(cmd, check=True)
     except subprocess.CalledProcessError as e:
-        print(f"Build failed: {e}")
+        print(f"Build failed: {e}", file=sys.stderr)
         sys.exit(e.returncode)
 
     # cleanup
@@ -589,12 +642,12 @@ def build_with_nuitka(onedir, clang, mingw, nosoundcard, print_cmd=False, experi
     cmd = [arg for arg in cmd if arg != ""]
     if print_cmd:
         print(" ".join(cmd))
-        sys.exit()
+        sys.exit(0)
     fprint("Starting nuitka")
     try:
         subprocess.run(cmd, check=True)
     except subprocess.CalledProcessError as e:
-        print(f"Build failed: {e}")
+        print(f"Build failed: {e}", file=sys.stderr)
         sys.exit(e.returncode)
 
     # cleanup
@@ -680,12 +733,20 @@ if __name__ == "__main__":
             build_with_nuitka(args.onedir, args.clang, args.mingw, args.nosoundcard, print_cmd=True)
         else:
             build_with_pyinstaller(args.onedir, args.nosoundcard, print_cmd=True)
-        sys.exit()
+        sys.exit(0)
+
+    if check_python():
+        version = ensure_python()
+        if version:
+            os.execvp("uv", ["uv", "run", "-p", version, *sys.argv])
+        else:
+            os.execvp("uv", ["uv", "run", *sys.argv])
+        sys.exit(0)
 
     check_dev()
     if args.toggle_experimental:
         toggle_experimental()
-        sys.exit()
+        sys.exit(0)
     if args.lite or args.nosoundcard:
         remove_media()
     else:
@@ -700,7 +761,8 @@ if __name__ == "__main__":
         fprint("Experimental windowed mode enabled!")
 
     if sys.platform not in ("linux", "win32", "darwin"):
-        sys.exit(f"This platform is not supported: {sys.platform}")
+        print(f"This platform is not supported: {sys.platform}", file=sys.stderr)
+        sys.exit(1)
 
     enable_extensions(enable=(not args.disable_extensions))
 
@@ -726,4 +788,4 @@ if __name__ == "__main__":
 
     enable_extensions(enable=True, silent=True)
 
-    sys.exit()
+    sys.exit(0)

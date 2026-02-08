@@ -27,7 +27,7 @@ match_channel = re.compile(r"<#(\d*?)>")
 match_timestamp = re.compile(r"<t:(\d+)(:[tTdDfFR])?>")
 match_channel_id = re.compile(r"(?<=<#)\d*?(?=>)")
 match_escaped_md = re.compile(r"\\(?=[^a-zA-Z\d\s])")
-match_md_spoiler = re.compile(r"(?<!\\)((?<=\|))?\|\|[^_]+?\|\|")
+match_md_spoiler = re.compile(r"(?<!\\)\|\|.+?\|\|")
 match_md_code_snippet = re.compile(r"(?<!`|\\)`[^`]+`")
 match_md_code_block = re.compile(r"(?s)```.*?```")
 match_url = re.compile(r"https?:\/\/[\w-]+(\.[\w-])+[^\s)\]>]*")
@@ -368,6 +368,23 @@ def shift_ranges_all(diff, *ranges_lists):
             format_range[1] += diff
 
 
+def delete_ranges(outer_ranges, *ranges_lists):
+    """Delete all format ranges that are inside any of outer ranges"""
+    if not outer_ranges:
+        return
+    for ranges in ranges_lists:
+        for i in range(len(ranges) - 1, -1, -1):
+            format_range = ranges[i]
+            start = format_range[0]
+            end = format_range[1]
+            for outer_start, outer_end, *_ in outer_ranges:
+                if end < outer_start:
+                    break
+                if start >= outer_start and end <= outer_end:
+                    del ranges[i]
+                    break
+
+
 def replace_discord_emoji(text, *ranges_lists):
     """
     Transform emoji strings into nicer looking ones:
@@ -455,7 +472,7 @@ def replace_roles(text, roles_ids, *ranges_lists):
 
         new_start = start + offset
         new_end = new_start + len(new_text)
-        role_ranges.append([new_start, new_end])   # dont mix role and user ids
+        role_ranges.append([new_start, new_end, None])   # dont mix role and user ids
 
         diff = len(new_text) - (end - start)
         if diff != 0:
@@ -562,6 +579,17 @@ def replace_timestamps(text, timezone, *ranges_lists):
     return "".join(result), timestamp_ranges
 
 
+def replace_spoilers(line):
+    """Replace spoiler: ||content|| with ACS_BOARD characters"""
+    for _ in range(10):   # lets have some limits
+        string_match = re.search(match_md_spoiler, line)
+        if not string_match:
+            break
+        start = string_match.start()
+        end = string_match.end()
+        line = line[:start] + "▒" * (end - start) + line[end:]
+    return line
+
 
 def replace_escaped_md(line, except_ranges=[]):
     r"""
@@ -586,18 +614,6 @@ def replace_escaped_md(line, except_ranges=[]):
     return line, indexes
 
 
-def replace_spoilers_oneline(line):
-    """Replace spoiler: ||content|| with ACS_BOARD characters"""
-    for _ in range(10):   # lets have some limits
-        string_match = re.search(match_md_spoiler, line)
-        if not string_match:
-            break
-        start = string_match.start()
-        end = string_match.end()
-        line = line[:start] + "▒" * (end - start) + line[end:]
-    return line
-
-
 def is_unseen(read_state):
     """Check if given read state is unseen"""
     if not read_state:
@@ -618,7 +634,6 @@ def generate_count(count):
     if count < 100:
         return f" ({count})"
     return " (99+)"
-
 
 
 def format_md_all(line, content_start, except_ranges):
@@ -1181,7 +1196,7 @@ def generate_chat(messages, roles, channels, max_length, my_id, my_roles, member
                     if emoji_as_text:
                         content = emoji.demojize(content)
                     content, _ = replace_escaped_md(content)
-                    content = replace_spoilers_oneline(content)
+                    content = replace_spoilers(content)
                     content, _ = replace_discord_emoji(content)
                     content, _ = replace_mentions(content, ref_message["mentions"], global_name=use_global_name, use_nick=use_nick)
                     content, _ = replace_roles(content, roles)
@@ -1334,7 +1349,7 @@ def generate_chat(messages, roles, channels, max_length, my_id, my_roles, member
                 if not skip:
                     urls.append([start, end])
 
-        # find all spoilers
+        # find spoilers - must be after all other replacements
         spoilers = []
         for match in re.finditer(match_md_spoiler, message_line):
             spoilers.append([match.start(), match.end()])
@@ -1357,12 +1372,28 @@ def generate_chat(messages, roles, channels, max_length, my_id, my_roles, member
                 timestamp_ranges,
             )
         message_line, escaped_indexes = replace_escaped_md(message_line, chain(code_snippets, code_blocks, urls))
+
+        # corrent format indexes for removed markdown escape characters "\"
         if escaped_indexes:
             move_by_indexes(
                 escaped_indexes,
                 md_format,
                 urls,
                 spoilers,
+                code_snippets,
+                code_blocks,
+                emoji_ranges,
+                mention_ranges,
+                channel_ranges,
+                timestamp_ranges,
+            )
+
+        # delete all format ranges that are inside spoiler ranges
+        if spoilers:
+            delete_ranges(
+                spoilers,
+                md_format,
+                urls,
                 code_snippets,
                 code_blocks,
                 emoji_ranges,
@@ -2221,7 +2252,7 @@ def generate_extra_window_search(messages, roles, channels, blocked, total_msg, 
                 content = message["content"]
                 if emoji_as_text:
                     content = emoji.demojize(content)
-                content = replace_spoilers_oneline(content)
+                content = replace_spoilers(content)
                 content, _ = replace_discord_emoji(content)
                 content, _ = replace_mentions(content, message["mentions"], global_name=use_global_name, use_nick=use_nick)
                 content, _ = replace_roles(content, roles)
@@ -2465,7 +2496,7 @@ def generate_message_notification(data, channels, roles, guild_name, convert_tim
         title = get_global_name(data, use_nick) if use_global_name else data["username"]
 
     if data["content"]:
-        body = replace_spoilers_oneline(data["content"])
+        body = replace_spoilers(data["content"])
         body, _ = replace_discord_emoji(body)
         body, _ = replace_mentions(body, data["mentions"], global_name=use_global_name, use_nick=use_nick)
         body, _ = replace_roles(body, roles)

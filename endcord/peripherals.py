@@ -90,7 +90,8 @@ elif sys.platform == "darwin":
     temp_path = f"~/Library/Caches/TemporaryItems{APP_NAME}"
     downloads_path = "~/Downloads"
 else:
-    sys.exit(f"Unsupported platform: {sys.platform}")
+    print(f"Unsupported platform: {sys.platform}", file=sys.stderr)
+    sys.exit(1)
 
 
 # ensure paths exists

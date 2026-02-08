@@ -12,7 +12,7 @@ os.environ["PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION"] = "python"   # fix for http
 from endcord import arg, defaults, peripherals
 
 APP_NAME = "endcord"
-VERSION = "1.2.0"
+VERSION = "1.3.0"
 default_config_path = peripherals.config_path
 log_path = peripherals.log_path
 uses_pgcurses = hasattr(curses, "PGCURSES")
@@ -98,7 +98,8 @@ def main(args):
             importlib.util.find_spec("av") is not None and
             importlib.util.find_spec("nacl") is not None
         ):
-            sys.exit("Terminal media player is not supported")
+            print("Terminal media player is not supported", file=sys.stderr)
+            sys.exit(1)
         from endcord import media
         if uses_pgcurses:
             curses.enable_tray = False
@@ -133,7 +134,8 @@ def main(args):
             selected = None
         profiles, selected, proceed = profile_manager.manage(profiles_path, selected, config, force_open=args.manager)
         if not profiles:
-            sys.exit("Token not provided in profile manager nor as argument")
+            print("Token not provided in profile manager nor as argument")
+            sys.exit(0)
     if not proceed:
         sys.exit(0)
 

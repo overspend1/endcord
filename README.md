@@ -71,7 +71,7 @@ It is built with python and ncurses library, to deliver lightweight yet feature 
 - Customizable status, title and prompt lines
 - Customizable chat lines (message, newline, reaction, reply)
 - Customizable colors and ASCII art
-- Show discord emoji as `:emoji_name:`
+- Show discord emoji as `:emoji_name:` and view them in media player
 - Show mentions as `@username`, `@role`, `#channel_name`
 - Channel chat caching
 - Remember last open channel and tree state
@@ -187,7 +187,6 @@ Cycle status (online/away/DnD/invisible) - `Alt+D`
 Open selected post in forum - `Enter`  
 Copy selected message url to clipboard - `Alt+U`  
 Copy selected channel (in tree) url to clipboard - `Alt+Shift+U`  
-Go to channel/message mentioned in selected message - `Alt+G`  
 Toggle channel tabbed (pinned) state - `Ctrl+T`  
 Switch to tab: `Alt+NUM` (`NUM`: 1-9 in number row, not numeric keypad)  
 Media player: quit - `escape`, pause - `Space`, seek - `Left/Right`, replay - `Z`  
@@ -200,16 +199,19 @@ Scroll up/down in all windows
 Single click to select in all windows, in tree also: un/collapse  
 Double click in:  
 Tree - or enter channel  
-Extra window - select item  ctrl+m
+Extra window - select item  ctrl+m  
 Member list - view member profile  
 Input line - select a word  
-Double click in chat:  
-On message time - start replying to message  
-On message reply line - go to that message  
-On username - view profile  
-On reaction - toggle that reaction  
-On URL - open media / download file / open in browser  
-On spoiler - reveal that spoiler  
+Double click in chat on:  
+Message time - start replying to message  
+Message reply line - go to that message  
+Username - view profile  
+Reaction - toggle that reaction  
+URL - open media / download file / open in browser  
+Spoiler - reveal that spoiler  
+User mention - view profile of mentioned user  
+Channel - go to that channel  
+Custom discord emoji - view that emoji in media player  
 
 On Windows, double click isn't working, instead use triple click.
 
@@ -372,7 +374,7 @@ Keybinding remain the same, but all codes are like on Linux, so old keybinding c
 If using external editor, use editor with graphical interface. TUI editors will not work, as this is no longer in terminal.  
 Also, endcord built-in media player will not work because its standalone TUI thats not using curses. All meda will be opened in native player.  
 Building with nuitka on python >=3.13 will create executable that segfaults! Building with pyinstaller is not recommended because it generates huge binary.  
-You can toggle experimental mode bu running: `uv run build.py --experimental`.  
+You can toggle experimental mode bu running: `python build.py --experimental`.  
 Then run endcord from source: `uv run main.py`.  
 After first run in experimental mode, extra config will be generated in endcord config path in file called `pgcurses.json`. More info in [configuration](configuration.md).
 
@@ -438,34 +440,33 @@ Never tested on macOS. Feedback is welcome.
 
 Third party endcord forks may add features that can lead to account ban, or contain malicious code, cause instability, especially if they include LLM generated/modified code.
 
+
 ## Building
-To see all build script options, run: `uv run build.py -h`.  
+To see all build script options, run: `python build.py -h`.  
 To build endcord-lite, add `--lite` flag. No voice calls and ascii media, slightly less RAM usage, smaller executable, faster startup.  
 To build into directory, not as a single executable, add `--onedir` flag. Will speed up startup.  
 To build with Nuitka, add `--nuitka` flag. More optimized, smaller executable, long compile time. See [Nuitka](#nuitka) for more info.  
 If compiler is not available, or built binary is failing, try building with `--nocython`, which will produce slightly less optimized binaries.  
-To toggle [experimental windowed mode](#experimental-windowed-mode) run: `uv run build.py --toggle-experimental`.  
-If you want to build without `orjson` (uses rust), run `uv remove orjson` for the first time, before running anything else. This will make it fallback to standard json (more CPU usage by game detection). Optionally it can use `ujson`, run `uv add ujson` to install it.  
-Currently endcord cant be built with nuitka in python >=3.14. Use `uv run -p 3.13 build.py`.  
+To toggle [experimental windowed mode](#experimental-windowed-mode) run: `python build.py --toggle-experimental`.  
 
 ### Linux
 1. Clone this repository: `git clone https://github.com/sparklost/endcord.git`
 2. Install [uv](https://docs.astral.sh/uv/getting-started/installation/)
 3. `cd endcord`
-4. run build script: `uv run build.py`  
+4. run build script: `python build.py`  
 
 ### Windows
 1. Install [Python](https://www.python.org/) 3.13 or later
 2. Install [uv](https://docs.astral.sh/uv/getting-started/installation/)
 3. Clone this repository, unzip it
 4. Open terminal, cd to unzipped folder
-5. run build script: `uv run build.py`
+5. run build script: `python build.py`
 
 ### macOS
 1. Install [Python](https://www.python.org/) 3.13 or later
 2. Clone this repository, unzip it
 3. Open terminal, cd to unzipped folder
-4. run build script: `uv run build.py`
+4. run build script: `python build.py`
 
 ### Nuitka
 To enable building with Nuitka, add `--nuitka` flag (takes a long time).  
@@ -483,6 +484,12 @@ Anyway, to run it from source:
 Install dependencies: `uv sync -p 3.14t --group media`.  
 Remove orjson (doesn't support freethreaded python): `uv remove orjson`. (ujson also doesn't support freethreaded).  
 Run main.py: `uv run -p 3.14t main.py`.  
+
+### Building without orjson
+If you want to build without `orjson` (uses rust), run `uv remove orjson` for the first time, before running anything else.  
+This will make it fallback to standard json (more CPU usage by game detection).  
+Optionally it can use `ujson`, run `uv add ujson` to install it.  
+Then force build.py to skip auto-python setup: `uv run -p 3.13 build.py`, and add other preferred arguments after build.py.  
 
 
 ## FAQ

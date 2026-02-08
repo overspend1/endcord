@@ -2118,6 +2118,7 @@ class Discord():
                     return None, etag
                 return save_path, etag
         elif response.status == 304:   # not modified
+            current_time = int(time.time()/1000)
             save_path = os.path.expanduser(os.path.join(save_dir, f"detectable_apps_{etag}_{current_time}.ndjson"))
             return save_path, etag
         log_api_error(response, "get_detectable_apps")

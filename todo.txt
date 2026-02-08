@@ -1,14 +1,14 @@
-Add ability to open custom emoji with media player
-    double click
-    command
-Add ability to double click on mentions
-    double click
-    add command
-Add ability to double click on channel in chat
-    double click
-    update old command logic
-Update screenshots
+Add mark_current_as_read command
+Add mark_current_server_as_read command
+Add collapse_all_but_current command
+Persist member list state across sessions
+Persist member list state across servers
+    dont subscribe if member list is closed
+Add ability to bind enter and arrow keys
 
+Add next/prev server bindings
+Add next/prev channel bindings
+Fix issues with many wide characters
 Vim-like bindings
     have input mode - type in input line
     have normal mode - single keys can be used as bindings and execute commands

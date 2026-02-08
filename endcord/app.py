@@ -1491,7 +1491,7 @@ class Endcord:
                         embeds.append(embed["url"])
                 selected_urls = []
                 urls = self.get_msg_urls_chat(msg_index)
-                for num in self.get_url_from_selected_line(chat_sel):
+                for num in self.get_stuff_from_selected_line(chat_sel, 0):   # get url
                     if urls[num] in embeds:
                         selected_urls.append(urls[num])
                 if len(selected_urls) == 1:
@@ -1516,7 +1516,7 @@ class Endcord:
                     continue
                 selected_urls = []
                 urls = self.get_msg_urls_chat(msg_index)
-                for num in self.get_url_from_selected_line(chat_sel):
+                for num in self.get_stuff_from_selected_line(chat_sel, 0):   # get url
                     selected_urls.append(urls[num])
                 if len(selected_urls) == 1:
                     selected_url = self.refresh_attachment_url(selected_urls[0])
@@ -1544,7 +1544,7 @@ class Endcord:
                 selected_urls = []
                 urls = self.get_msg_urls_chat(msg_index)
                 if urls:
-                    for num in self.get_url_from_selected_line(chat_sel):
+                    for num in self.get_stuff_from_selected_line(chat_sel, 0):   # get url
                         if urls[num] in embeds:
                             selected_urls.append(urls[num])
                 else:
@@ -1685,15 +1685,7 @@ class Endcord:
                 msg_index = self.lines_to_msg(chat_sel)
                 if msg_index is None:
                     continue
-                user_id = self.messages[msg_index]["user_id"]
-                guild_id = self.active_channel["guild_id"]
-                if self.viewing_user_data["id"] != user_id or self.viewing_user_data["guild_id"] != guild_id:
-                    if guild_id:
-                        self.viewing_user_data = self.discord.get_user_guild(user_id, guild_id)
-                    else:
-                        self.viewing_user_data = self.discord.get_user(user_id)
-                self.stop_assist(close=False)
-                self.view_profile(self.viewing_user_data)
+                self.view_profile(self.messages[msg_index]["user_id"])
 
             # view channel info
             elif action == 25:
@@ -1760,15 +1752,7 @@ class Endcord:
                     member = self.member_list[mlist_selected]
                     if "id" in member:
                         self.restore_input_text = (input_text, "standard extra")
-                        user_id = member["id"]
-                        guild_id = self.active_channel["guild_id"]
-                        if self.viewing_user_data["id"] != user_id or self.viewing_user_data["guild_id"] != guild_id:
-                            if guild_id:
-                                self.viewing_user_data = self.discord.get_user_guild(user_id, guild_id)
-                            else:
-                                self.viewing_user_data = self.discord.get_user(user_id)
-                        self.stop_assist(close=False)
-                        self.view_profile(self.viewing_user_data)
+                        self.view_profile(member["id"])
 
             # view summaries
             elif action == 28:
@@ -1817,40 +1801,6 @@ class Endcord:
                 if "pending" not in self.messages[msg_index]:
                     self.copy_msg_url(msg_index)
 
-            # go to channel/message mentioned in this message
-            elif action == 32:
-                self.restore_input_text = (input_text, "standard")
-                msg_index = self.lines_to_msg(chat_sel)
-                if msg_index is None:
-                    continue
-                channels = []
-                for match in re.finditer(formatter.match_discord_channel_combined, self.messages[msg_index]["content"]):
-                    # groups: 1 - channel_id for <#id>, 2 - guild_id for url, 3 - channel_id for url, 4 - msg_id for url
-                    if match.group(1):
-                        guild_id = self.active_channel["guild_id"]
-                        channel_id = match.group(3)
-                        message_id = None
-                    else:
-                        guild_id = match.group(2)
-                        channel_id = match.group(3)
-                        message_id = match.group(4)
-                    channels.append((guild_id, channel_id, message_id))
-                if not channels:
-                    continue
-                if len(channels) == 1:
-                    channel_id, channel_name, guild_id, guild_name, parent_hint = self.find_parents_from_id(channels[0][1])
-                    if channel_name:
-                        self.switch_channel(channel_id, channel_name, guild_id, guild_name, parent_hint=parent_hint)
-                        if message_id:
-                            self.go_to_message(message_id)
-                else:
-                    self.reset_states()
-                    self.add_to_store(self.active_channel["channel_id"], input_text)
-                    self.ignore_typing = True
-                    self.going_to_ch = channels
-                    self.restore_input_text = (None, "prompt")
-                    self.update_status_line()
-
             # cycle status
             elif action == 33:
                 self.restore_input_text = (input_text, "standard")
@@ -1868,7 +1818,7 @@ class Endcord:
             elif action == 34:
                 self.run = False
                 time.sleep(0.5)
-                sys.exit()
+                sys.exit(0)
 
             # toggle member list
             elif self.get_members and action == 35:
@@ -2034,7 +1984,7 @@ class Endcord:
                     elif chat_line_map:
                         msg_index = chat_line_map[0]
                         clicked_type = None
-                        selected = None
+                        clicked_id = None
                         # decode
                         if chat_line_map[1] and chat_line_map[1][0] < mouse_x < chat_line_map[1][1]:
                             clicked_type = 2   # username
@@ -2044,21 +1994,37 @@ class Endcord:
                             for num, reaction in enumerate(chat_line_map[3]):
                                 if reaction[0] < mouse_x < reaction[1]:
                                     clicked_type = 4   # reaction
-                                    selected = num
+                                    clicked_id = num
                                     break
                         elif chat_line_map[4] and chat_line_map[4][0] < mouse_x < chat_line_map[4][1]:
                             clicked_type = 1   # message timestamp
-                        else:
-                            if chat_line_map[5]:   # url/embed
-                                for num, url in enumerate(chat_line_map[5]):
-                                    if url[0] < mouse_x < url[1]:
+                        elif chat_line_map[5]:   # click on message content elements
+                            ranges = chat_line_map[5]
+                            if ranges[0]:   # url/embed
+                                for num, item in enumerate(ranges[0]):
+                                    if item[0] < mouse_x < item[1]:
                                         clicked_type = 5
-                                        url_index = url[2]
-                            if chat_line_map[6]:   # spoiler (owerwries url)
-                                for num, spoiler in enumerate(chat_line_map[6]):
-                                    if spoiler[0] < mouse_x < spoiler[1]:
+                                        clicked_id = item[2]
+                            elif ranges[2]:   # custom emoji
+                                for num, item in enumerate(ranges[2]):
+                                    if item[0] < mouse_x < item[1]:
+                                        clicked_type = 7
+                                        clicked_id = item[2]
+                            elif ranges[3]:   # mention
+                                for num, item in enumerate(ranges[3]):
+                                    if item[0] < mouse_x < item[1]:
+                                        clicked_type = 8
+                                        clicked_id = item[2]
+                            elif ranges[4]:   # channel
+                                for num, item in enumerate(ranges[4]):
+                                    if item[0] < mouse_x < item[1]:
+                                        clicked_type = 9
+                                        clicked_id = item[2]
+                            if ranges[1]:   # spoiler (owerwries previous)
+                                for num, item in enumerate(ranges[1]):
+                                    if item[0] < mouse_x < item[1]:
                                         clicked_type = 6
-                                        spoiler_index = spoiler[2]
+                                        clicked_id = item[2]
                         # execute
                         if clicked_type == 1 and "deleted" not in self.messages[msg_index]:   # start reply
                             if self.messages[msg_index]["user_id"] == self.my_id:
@@ -2074,25 +2040,17 @@ class Endcord:
                             self.update_status_line()
                         elif clicked_type == 2:   # show profile
                             self.restore_input_text = (input_text, "standard extra")
-                            user_id = self.messages[msg_index]["user_id"]
-                            guild_id = self.active_channel["guild_id"]
-                            if self.viewing_user_data["id"] != user_id or self.viewing_user_data["guild_id"] != guild_id:
-                                if guild_id:
-                                    self.viewing_user_data = self.discord.get_user_guild(user_id, guild_id)
-                                else:
-                                    self.viewing_user_data = self.discord.get_user(user_id)
-                            self.stop_assist(close=False)
-                            self.view_profile(self.viewing_user_data)
+                            self.view_profile(self.messages[msg_index]["user_id"])
                         elif clicked_type == 3:   # go to replied
                             self.go_replied(msg_index)
-                        elif clicked_type == 4 and selected is not None:   # add/remove reaction
-                            self.build_reaction(str(selected + 1), msg_index=msg_index)
+                        elif clicked_type == 4 and clicked_id is not None:   # add/remove reaction
+                            self.build_reaction(str(clicked_id + 1), msg_index=msg_index)
                         elif clicked_type == 5:   # url
                             urls = self.get_msg_urls_chat(msg_index)
                             content_urls = []
                             for match in re.finditer(formatter.match_url, self.messages[msg_index]["content"]):
                                 content_urls.append(match.group())
-                            url = urls[url_index]
+                            url = urls[clicked_id]
                             embed_url = False
                             for embed in self.get_msg_embeds(msg_index, media_only=False, stickers=False):
                                 if embed == url and url not in content_urls:
@@ -2111,8 +2069,17 @@ class Endcord:
                             else:
                                 url = self.refresh_attachment_url(url)
                                 webbrowser.open(url, new=0, autoraise=True)
-                        elif clicked_type == 6:
-                            self.spoil(msg_index, spoiler_index)
+                        elif clicked_type == 6:   # spoiler
+                            self.spoil(msg_index, clicked_id)
+                        elif clicked_type == 7:   # custom emoji
+                            self.view_emoji(clicked_id)
+                        elif clicked_type == 8:   # mention
+                            self.restore_input_text = (input_text, "standard extra")
+                            self.view_profile(clicked_id)
+                        elif clicked_type == 9:   # channel
+                            channel_id, channel_name, guild_id, guild_name, parent_hint = self.find_parents_from_id(clicked_id)
+                            if channel_name:
+                                self.switch_channel(channel_id, channel_name, guild_id, guild_name, parent_hint=parent_hint)
 
             # mouse single-click on extra line
             elif action == 48:
@@ -2636,7 +2603,7 @@ class Endcord:
         elif cmd_type == 2:   # BOTTOM
             self.go_bottom()
 
-        elif cmd_type == 3:   # GO_REPLY
+        elif cmd_type == 3:   # GOTO_REPLY
             msg_index = self.lines_to_msg(chat_sel)
             if msg_index is None:
                 return
@@ -2654,7 +2621,7 @@ class Endcord:
             selected_urls = []
             urls = self.get_msg_urls_chat(msg_index)
             if urls:
-                for num in self.get_url_from_selected_line(chat_sel):
+                for num in self.get_stuff_from_selected_line(chat_sel, 0):   # get url
                     if urls[num] in embeds:
                         selected_urls.append(urls[num])
                 if len(selected_urls) == 1 or select_num:
@@ -2679,7 +2646,7 @@ class Endcord:
             selected_urls = []
             urls = self.get_msg_urls_chat(msg_index)
             if urls:
-                for num in self.get_url_from_selected_line(chat_sel):
+                for num in self.get_stuff_from_selected_line(chat_sel, 0):   # get url
                     selected_urls.append(urls[num])
                 if len(selected_urls) == 1 or select_num:
                     select_num = max(min(select_num-1, len(selected_urls)-1), 0)
@@ -2707,7 +2674,7 @@ class Endcord:
             selected_urls = []
             urls = self.get_msg_urls_chat(msg_index)
             if urls:
-                for num in self.get_url_from_selected_line(chat_sel):
+                for num in self.get_stuff_from_selected_line(chat_sel, 0):   # get url
                     if urls[num] in embeds:
                         selected_urls.append(urls[num])
             else:
@@ -2779,14 +2746,7 @@ class Endcord:
                 if msg_index is None:
                     return
                 user_id = self.messages[msg_index]["user_id"]
-            guild_id = self.active_channel["guild_id"]
-            if self.viewing_user_data["id"] != user_id or self.viewing_user_data["guild_id"] != guild_id:
-                if guild_id:
-                    self.viewing_user_data = self.discord.get_user_guild(user_id, guild_id)
-                else:
-                    self.viewing_user_data = self.discord.get_user(user_id)
-            self.stop_assist(close=False)
-            self.view_profile(self.viewing_user_data)
+            self.view_profile(user_id)
 
         elif cmd_type == 13:   # CHANNEL
             channel_id = cmd_args.get("channel_id", None)
@@ -2871,7 +2831,7 @@ class Endcord:
                 # groups: 1 - channel_id for <#id>, 2 - guild_id for url, 3 - channel_id for url, 4 - msg_id for url
                 if match.group(1):
                     guild_id = self.active_channel["guild_id"]
-                    channel_id = match.group(3)
+                    channel_id = match.group(1)
                     message_id = None
                 else:
                     guild_id = match.group(2)
@@ -3520,19 +3480,20 @@ class Endcord:
                 peripherals.save_json(self.state, f"state_{self.profiles["selected"]}.json")
                 self.update_tree()
 
-        elif cmd_type == 57:   # SHOW_EMOJI
-            match = re.search(formatter.match_d_emoji, cmd_args["name"])
-            if match:
-                emoji_id = match.group(3)
-                emoji_path = self.discord.get_emoji(emoji_id)
-                if emoji_path:
-                    self.media_thread = threading.Thread(target=self.open_media, daemon=True, args=(emoji_path, ))
-                    self.media_thread.start()
-                elif emoji_path is None:
-                    self.gateway.set_offline()
-                    self.update_extra_line("Network error.")
+        elif cmd_type == 57:   # VIEW_EMOJI
+            if cmd_args.get("name"):
+                match = re.search(formatter.match_d_emoji, cmd_args["name"])
+                if match:
+                    self.view_emoji(match.group(3))
+                else:
+                    self.update_extra_line("Invalid emoji. Should be: <:EmojiName:emoji_id>")
             else:
-                self.update_extra_line("Invalid emoji. Should be: <:EmojiName:emoji_id>")
+                select_num = cmd_args.get("num", 0)
+                if not select_num:
+                    select_num = 0
+                emojis = self.get_stuff_from_selected_line(chat_sel, 2)   # get emoji
+                select_num = max(min(select_num-1, len(emojis)-1), 0)
+                self.view_emoji(emojis[select_num])
 
         elif cmd_type == 58:   # QUIT
             self.gateway.disconnect_ws()
@@ -3862,15 +3823,19 @@ class Endcord:
         return urls
 
 
-    def get_url_from_selected_line(self, chat_sel):
-        """Get selected url indexes in selected message from selected line in chat"""
+    def get_stuff_from_selected_line(self, chat_sel, thing):
+        """
+        Get selected stuff indexes in message from selected line in chat.
+        Stuff can be: 0 - url, 1 - spoiler, 2 - custom emoji, 3 - mention, 4 - channel
+        """
         chat_line_map = self.chat_map[chat_sel]
         if not chat_line_map or not chat_line_map[5]:
             return []
-        line_urls = []
-        for url in chat_line_map[5]:
-            line_urls.append(url[2])
-        return line_urls
+        line_stuff = []
+        if chat_line_map[5]:
+            for item in chat_line_map[5][thing]:
+                line_stuff.append(item[2])
+        return line_stuff
 
 
     def get_msg_urls_chat(self, msg_index):
@@ -4517,16 +4482,31 @@ class Endcord:
             self.update_status_line()
 
 
-    def view_profile(self, user_data):
+    def view_profile(self, user_id=None, guild_id=None, user_data=None):
         """Format and show extra window with profile information"""
+        # get and cache user data
+        if not user_id and not user_data:
+            return
+        if not guild_id:
+            guild_id = self.active_channel["guild_id"]
+        self.stop_assist(close=False)
         if not user_data:
-            if user_data is None:   # network error
+            if self.viewing_user_data["id"] != user_id or self.viewing_user_data["guild_id"] != guild_id:
+                if guild_id:
+                    user_data = self.discord.get_user_guild(user_id, guild_id)
+                else:
+                    user_data = self.discord.get_user(user_id)
+            if user_data is None:
                 self.gateway.set_offline()
                 self.update_extra_line("Network error.")
-            else:
+                return
+            if not user_data:
                 self.update_extra_line("No profile information found.")
                 self.viewing_user_data = None
-            return
+                return
+        self.viewing_user_data = user_data
+
+        # collect other data
         max_w = self.tui.get_dimensions()[2][1]
         roles = []
         if user_data["roles"]:
@@ -4552,6 +4532,8 @@ class Endcord:
                 if "id" in presence and presence["id"] == user_id:
                     selected_presence = presence
                     break
+
+        # generate and draw extra window
         extra_title, extra_body = formatter.generate_extra_window_profile(user_data, roles, selected_presence, max_w)
         if self.emoji_as_text:
             extra_title = emoji.demojize(extra_title)
@@ -4761,6 +4743,17 @@ class Endcord:
         if self.log_queue_manager:
             self.log_queue_manager.stop()
             self.log_queue_manager = None
+
+
+    def view_emoji(self, emoji_id):
+        """Download and view custom emoji in media player"""
+        emoji_path = self.discord.get_emoji(emoji_id)
+        if emoji_path:
+            self.media_thread = threading.Thread(target=self.open_media, daemon=True, args=(emoji_path, ))
+            self.media_thread.start()
+        elif emoji_path is None:
+            self.gateway.set_offline()
+            self.update_extra_line("Network error.")
 
 
     def build_reaction(self, text, msg_index=None):
@@ -7498,7 +7491,7 @@ class Endcord:
                         break
                 if self.active_channel["guild_id"] in changed_guilds:
                     if self.viewing_user_data["id"]:
-                        self.view_profile(self.viewing_user_data)
+                        self.view_profile(user_data=self.viewing_user_data)
 
             # check for new member roles
             new_member_roles, nonce = self.gateway.get_member_roles()

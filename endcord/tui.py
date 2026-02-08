@@ -1209,7 +1209,7 @@ class TUI():
             except curses.error:
                 # exception will happen when window is resized to smaller w dimensions
                 if not self.disable_drawing:
-                    pass   # some other draw function will call self.resize() 
+                    pass   # some other draw function will call self.resize()
 
 
     def draw_title_tree(self):
@@ -2743,9 +2743,6 @@ class TUI():
 
             elif key in self.keybindings["copy_message_link"] and self.chat_selected != -1 and not forum:
                 return self.return_input_code(31)
-
-            elif key in self.keybindings["go_channel"] and self.chat_selected != -1 and not forum:
-                return self.return_input_code(32)
 
             elif key in self.keybindings["cycle_status"]:
                 return self.return_input_code(33)

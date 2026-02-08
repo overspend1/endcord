@@ -202,7 +202,7 @@ class TerminalMedia():
         self.stop_playback()
         time.sleep(1)
         terminal_utils.leave_tui()
-        sys.exit()   # failsafe
+        sys.exit(0)   # failsafe
 
 
     def pil_img_to_term(self, img, remove_alpha=True):
@@ -596,7 +596,8 @@ class TerminalMedia():
                     logger.warning(f"Unsupported media format: {mime}")
                     self.run = False
                     if self.external:
-                        sys.exit(f"Unsupported media format: {mime}")
+                        print(f"Unsupported media format: {mime}", file=sys.stderr)
+                        sys.exit(1)
             while self.run:   # dont exit when video ends
                 time.sleep(0.2)
         except Exception as e:
@@ -718,8 +719,10 @@ def runner(path, config, keybindings):
     """Main function"""
     path = os.path.expanduser(path)
     if not os.path.exists(path):
-        sys.exit("Cant play media: File not found.")
+        print("Cant play media: File not found.", file=sys.stderr)
+        sys.exit(1)
     if os.path.isdir(path):
-        sys.exit("Cant play media: Specified path is a directory.")
+        print("Cant play media: Specified path is a directory.", file=sys.stderr)
+        sys.exit(1)
     terminal_media = TerminalMedia(config, keybindings, external=True)
     terminal_media.play(path)

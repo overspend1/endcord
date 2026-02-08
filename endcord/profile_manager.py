@@ -1069,7 +1069,7 @@ def manage(profiles_path, external_selected, config, force_open=False):
     try:
         data = curses.wrapper(main_tui, profiles_enc, profiles_plain, selected, have_keyring, config)
         if not data:
-            sys.exit()
+            sys.exit(0)
         else:
             profiles_enc, profiles_plain, selected, proceed = data
     except curses.error as e:
