@@ -32,7 +32,7 @@ build = [
     "cython>=3.2.4",
     "nuitka>=4.0",
     "pyinstaller>=6.18.0",
-    "setuptools>=80.9.0",
+    "setuptools>=82.0.0",
 ]
 media = [
     "av>=16.1.0",

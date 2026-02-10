@@ -68,7 +68,7 @@ COMMAND_ASSISTS = (
     ("voice_toggle_mute - toggle mute state before joining a call", "voice_toggle_mute"),
     ("generate_invite *duration *limit - generate invite to current server, default is 7 days", "generate_invite"),
     ("rename_folder [name] - locally rename currently selected folder in tree", "rename_folder"),
-    ("collapse_all_but_current - collapse all servers except currently opened", "collapse_all_but_current"),
+    ("collapse_all_except *[option] - collapse all servers in tree except specific [option]", "collapse_all_except"),
     ("send_message * - see commands documentation for options", "send_message"),
     ("redraw - redraw UI if it ever gets messed up", "redraw"),
     ("open_config_dir - open config directory with system file manager", "open_config_dir"),

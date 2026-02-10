@@ -59,6 +59,7 @@ MB = 1024 * 1024
 USER_UPLOAD_LIMITS = (10*MB, 50*MB, 500*MB, 50*MB)   # premium tier 0, 1, 2, 3 (none, classic, full, basic)
 GUILD_UPLOAD_LIMITS = (10*MB, 10*MB, 50*MB, 100*MB)   # premium tier 0, 1, 2, 3
 FORUM_COMMANDS = (1, 2, 7, 13, 14, 15, 17, 20, 22, 25, 27, 29, 30, 31, 32, 40, 42, 49, 50, 51, 52, 53, 55, 56, 57, 58, 61, 62, 66, 67)
+COLLAPSE_ALL_EXCEPT_OPTIONS = ("current", "selected", "above", "bellow")
 
 match_emoji = re.compile(r"<:(.*):(\d*)>")
 match_youtube = re.compile(r"(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)[a-zA-Z0-9_-]{11}")
@@ -969,7 +970,7 @@ class Endcord:
         self.update_tree()
 
 
-    def open_guild(self, guild_id, select=False, restore=False, open_only=False, one_open=False, dont_close_this=False):
+    def open_guild(self, guild_id, select=False, restore=False, open_only=False, one_open=False, dont_close_this=False, direction=0):
         """When opening guild in tree"""
         # check in tree_format if it should be un-/collapsed
         collapse = False
@@ -1001,15 +1002,21 @@ class Endcord:
         else:
             collapsed = []
         guild_ids = []
+        passed = False
         if one_open:
             # collapse all other guilds
             for guild_1 in self.guilds:
-                if (collapse and not dont_close_this) or guild_1["guild_id"] != guild_id:
-                    collapsed.append(guild_1["guild_id"])
                 guild_ids.append(guild_1["guild_id"])
-            # copy categories
+                if guild_1["guild_id"] == guild_id:
+                    passed = True
+                    if collapse and not dont_close_this:
+                        collapsed.append(guild_id)
+                    continue
+                if direction == 0 or (direction == -1 and passed) or (direction == 1 and not passed):
+                    collapsed.append(guild_1["guild_id"])
+            # copy already collapsed categories
             for collapsed_id in self.state["collapsed"]:
-                if collapsed_id not in guild_ids:
+                if collapsed_id not in collapsed:
                     collapsed.append(collapsed_id)
         elif restore:
             # copy all
@@ -3586,8 +3593,20 @@ class Endcord:
                 peripherals.save_json(self.state, f"state_{self.profiles["selected"]}.json")
             self.update_tabs()
 
-        elif cmd_type == 69:   # COLLAPSE_ALL_BUT_CURRENT
-            self.open_guild(self.active_channel["guild_id"], select=True, one_open=True, dont_close_this=True)
+        elif cmd_type == 69:   # COLLAPSE_ALL_EXCEPT
+            if "value" not in cmd_args or cmd_args["value"] == 2:
+                self.open_guild(self.active_channel["guild_id"], select=True, one_open=True, dont_close_this=True)
+            elif cmd_args["value"] in (-1, 0, 1):
+                if self.tree_metadata[tree_sel]:
+                    if self.tree_metadata[tree_sel]["type"] == -1:
+                        guild_id = self.tree_metadata[tree_sel]["id"]
+                    else:
+                        guild_id, _, _ = self.find_parents_from_tree(tree_sel)
+                    if guild_id:
+                        self.open_guild(guild_id, select=True, one_open=True, dont_close_this=True, direction=cmd_args["value"])
+            else:
+                self.update_extra_line("Invalid command arguments.")
+                return
 
         if success is None:
             self.gateway.set_offline()
@@ -5081,6 +5100,15 @@ class Endcord:
                 self.assist_found = search.search_tabs(
                     self.tabs_names,
                     assist_word[11:],
+                    limit=self.assist_limit,
+                    score_cutoff=self.assist_score_cutoff,
+                )
+
+            elif assist_word.lower().startswith("collapse_all_except "):
+                self.assist_found = search.search_options(
+                    COLLAPSE_ALL_EXCEPT_OPTIONS,
+                    assist_word[20:],
+                    assist_word[:19],
                     limit=self.assist_limit,
                     score_cutoff=self.assist_score_cutoff,
                 )

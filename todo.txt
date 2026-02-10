@@ -1,8 +1,5 @@
-Replace collapse_all_but_current with collapse_all_except
-    collapse_all_except current/selected/above/bellow
+Add select next/prev server/channel commands
 
-Add next/prev server bindings
-Add next/prev channel bindings
 Fix issues with many wide characters in chat
 Fix issues with wide characters in username
 Fix issues with wide characters in input line

@@ -56,6 +56,23 @@ if importlib.util.find_spec("endcord_cython") and importlib.util.find_spec("endc
     from endcord_cython.search import fuzzy_match_score
 
 
+def search_options(options, query, prompt, limit=50, score_cutoff=15):
+    """Generic search for options"""
+    results = []
+    worst_score = score_cutoff
+
+    for option in options:
+        score = fuzzy_match_score(query, option)
+        if score < worst_score and query:
+            continue
+        heapq.heappush(results, (option, prompt + " " + option, score))
+        if len(results) > limit:
+            heapq.heappop(results)
+            worst_score = results[0][2]
+
+    return sorted(results, key=lambda x: x[2], reverse=True)
+
+
 def search_channels_guild(channels, query, limit=50, score_cutoff=15):
     """Search for channels in one guild"""
     results = []

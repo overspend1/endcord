@@ -14,9 +14,8 @@
 </div>
 
 Endcord is a third-party feature rich Discord client, running entirely in terminal.  
-It is built with python and ncurses library, to deliver lightweight yet feature rich experience.  
+It is built with Python (this [doesnt mean its slow](#note-on-python-performance-misconceptions)) and ncurses library, to deliver lightweight yet feature rich experience.  
 [More screenshots](https://github.com/sparklost/endcord/blob/main/.github/screenshots.md).  
-
 
 ## Features
 - Extremely low CPU and RAM usage (values greatly depend on number of servers and channels)
@@ -530,6 +529,9 @@ If you did something particular with endcord that caused the ban, open an issue 
 ### Debug files
 Anonymized data that might help in debugging is saved in `Debug` directory, see [Configuration](#configuration) for path.  
 All channel and server names, topics, descriptions are replaced. All channel and server IDs are added to random number and hashed, so they are irreversible changed, and will be different on each run.
+
+### Note on Python performance misconceptions
+Python is slower than languages like C or Rust, but in this use case it does not affect performance. Endcord is event-driven and network-bound not CPU-bound, so Python’s overhead is negligible (significantly reduced when built with nuitka). And all CPU-critical components are implemented in Cython. Python was chosen because it enables rapid development.
 
 ### Some role colors are wrong
 This is an [issue](https://github.com/python/cpython/issues/119138) with cpython ncurses API. It is ignoring color pairs with ID larger than 255. This means only 255 color pairs can actually be used. Only role colors can reach this limit, because they are initialized last.

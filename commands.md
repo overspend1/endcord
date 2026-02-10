@@ -126,8 +126,8 @@
     `duration` can be: `4w3d5h30m10s` where `w`is weeks, `d` is days..., can be used partially and mixed: `5h1w`. Default is 7 days and infinite uses.
 - `rename_folder [name]`  
     Locally rename currently selected folder in tree. Custom names are kept in state_profile_name.json in config dir.
-- `collapse_all_but_current`  
-    Collapse all servers except currently opened server.
+- `collapse_all_except *[option]`  
+    Collapse all servers in tree except specific `[option]`: `current` (default), `selected`, `above`, `bellow`.  
 - `send_message --channel_id=[channel_id]/<#[channel_id]> --reply_id=[message_id] --ping=[True/False] --attachment=[path] [message_content]`  
     Try not to abuse this command, as its run in a thread and can abuse API!  
     `--channel_id` - accepts both channel_id and formatted channel_id from assist, only last channel_id will be used. Default: current channel.  

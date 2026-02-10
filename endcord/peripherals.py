@@ -929,11 +929,11 @@ class SpellCheck():
     def start_aspell(self):
         """Start aspell with selected mode and language"""
         # cross-platform replacement for pexpect.spawn() because aspell works with it
-        self.proc = pexpect.popen_spawn.PopenSpawn(f"{self.aspell_path} -a --sug-mode={self.aspell_mode} --lang={self.aspell_language}", encoding="utf-8")
+        self.proc = pexpect.popen_spawn.PopenSpawn(f"{self.aspell_path} -a --sug-mode={self.aspell_mode} --lang={self.aspell_language}", encoding="utf-8", codec_errors="replace")
         self.proc.delaybeforesend = None
         try:
             start = time.time()
-            self.proc.expect("Ispell", timeout=1)
+            self.proc.expect(r"\r?\n", timeout=1)
             logger.info(f"Aspell initialized in {round((time.time() - start)*1000, 3)} ms")
         except pexpect.exceptions.EOF:
             logger.info("Aspell initialization %s", "error")
@@ -950,9 +950,11 @@ class SpellCheck():
         with self.lock:
             try:
                 self.proc.sendline(word)
-                self.proc.expect(r"[\r\n]+", timeout=ASPELL_TIMEOUT)
-                line = self.proc.readline().strip()
-                return line and line[0] in ("&", "#")
+                status = self.proc.expect([r"^[&\#\*].*\r?\n", r"\r?\n", pexpect.TIMEOUT], timeout=ASPELL_TIMEOUT)
+                if status == 0:
+                    line = self.proc.after.strip()
+                    return line[0] != "*"
+                return False
             except pexpect.exceptions.TIMEOUT:
                 return False   # if timed-out return it as correct
             except pexpect.exceptions.EOF:

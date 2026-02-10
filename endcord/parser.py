@@ -873,8 +873,18 @@ def command_string(text):
     elif text_lower.startswith("remove_all_tabs"):
         cmd_type = 68
 
-    # 69 - COLLAPSE_ALL_BUT_CURRENT
-    elif text_lower.startswith("collapse_all_but_current"):
+    # 69 - COLLAPSE_ALL_EXCEPT
+    elif text_lower.startswith("collapse_all_except"):
         cmd_type = 69
+        value_part = text_lower[20:].strip(" ")
+        logger.info(value_part)
+        if value_part == "current":
+            cmd_args = {"value": 2}
+        elif value_part == "selected":
+            cmd_args = {"value": 0}
+        elif value_part == "above":
+            cmd_args = {"value": -1}
+        elif value_part == "bellow":
+            cmd_args = {"value": 1}
 
     return cmd_type, cmd_args
