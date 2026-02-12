@@ -3652,7 +3652,8 @@ class Endcord:
                 elif found and obj and obj["type"] in target_types:
                     target_id = obj["id"]
                     break
-            if target_id:
+            if target_id is not None:
+                logger.info(target_id)
                 self.execute_command(25, {"channel_id": target_id}, "", chat_sel, tree_sel)   # goto command
                 return
 
