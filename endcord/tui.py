@@ -756,8 +756,8 @@ class TUI():
                     self.input_buffer[self.assist_start-1] in ASSIST_TRIGGERS
                 ):
                     assist_type = ASSIST_TRIGGERS.index(self.input_buffer[self.assist_start-1]) + 1
-                    if assist_type == 3 and self.assist_start != 1 and self.input_buffer[self.assist_start-2] not in (" ", "\n"):
-                        # skip :emoji trigger if no space before it
+                    if self.assist_start != 1 and self.input_buffer[self.assist_start-2] not in (" ", "\n") and self.input_buffer[self.assist_start] in (" ", "\n"):
+                        # skip trigger if no space before it
                         return None, None
                     assist_word = self.input_buffer[self.assist_start : self.input_index]
                     return assist_word, assist_type
