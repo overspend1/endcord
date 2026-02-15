@@ -17,18 +17,19 @@ import websocket
 # safely import soundcard, in case there is no sound system
 try:
     import soundcard
+
     have_soundcard = True
 except (AssertionError, RuntimeError):
     have_soundcard = False
 
 DISCORD_HOST = "discord.com"
-LOCAL_MEMBER_COUNT = 50   # members per guild, CPU-RAM intensive
-VOICE_FLAGS = 3   # CLIPS_ENABLED and ALLOW_VOICE_RECORDING
+LOCAL_MEMBER_COUNT = 50  # members per guild, CPU-RAM intensive
+VOICE_FLAGS = 3  # CLIPS_ENABLED and ALLOW_VOICE_RECORDING
 UDP_TIMEOUT = 10
 logger = logging.getLogger(__name__)
 CODECS = [
     # pyav depends on ffmpeg, and its usually built without encode for av1 and vp9
-    {"name":"opus", "type":"audio", "priority":1000, "payload_type":120},
+    {"name": "opus", "type": "audio", "priority": 1000, "payload_type": 120},
     # video disabled for now
     # {"name":"AV1", "type":"video", "priority":1000, "payload_type":101, "rtx_payload_type":102, "encode":False, "decode":True},
     # {"name":"H264", "type":"video", "priority":2000, "payload_type":103, "rtx_payload_type":104, "encode":True, "decode":True},
@@ -49,7 +50,8 @@ if have_soundcard:
 else:
     have_sound = False
 
-class Gateway():
+
+class Gateway:
     """Methods for fetching and sending data to Discord voice gateway through websocket"""
 
     def __init__(self, voice_gateway_data, my_id, mute, user_agent, proxy=None):
@@ -75,13 +77,14 @@ class Gateway():
         self.media_session_id = None
         self.connect()
 
-
     def create_udp_socket(self):
         """Create udp soocket to the server"""
         if self.proxy.scheme:
             self.udp = socks.socksocket(socket.AF_INET, socket.SOCK_DGRAM)
             self.udp.set_proxy(
-                proxy_type=socks.SOCKS5 if "socks" in self.proxy.scheme.lower() else socks.HTTP,
+                proxy_type=socks.SOCKS5
+                if "socks" in self.proxy.scheme.lower()
+                else socks.HTTP,
                 addr=self.proxy.hostname,
                 port=self.proxy.port,
             )
@@ -91,16 +94,14 @@ class Gateway():
         self.udp.settimeout(UDP_TIMEOUT)
         logger.debug("Created udp socket")
 
-
     def send_ip_discovery(self):
         """Send ip discorvery packet to the server"""
         packet = bytearray(74)
-        struct.pack_into(">H", packet, 0, 1)   # type = 1 (request)
-        struct.pack_into(">H", packet, 2, 70)   # length = 70
-        struct.pack_into(">I", packet, 4, self.ssrc)   # big-endian ssrc
+        struct.pack_into(">H", packet, 0, 1)  # type = 1 (request)
+        struct.pack_into(">H", packet, 2, 70)  # length = 70
+        struct.pack_into(">I", packet, 4, self.ssrc)  # big-endian ssrc
         self.udp.send(packet)
         logger.debug("Sent IP discovery packet")
-
 
     def receive_ip_discovery(self):
         """Receive this client ip and port from the server"""
@@ -120,16 +121,18 @@ class Gateway():
             self.client_port = struct.unpack_from(">H", data, 72)[0]
             logger.debug("Rceived IP discovery packet")
         except socket.timeout:
-            logger.error(f"Failed to receive IP discovery: timeout after {UDP_TIMEOUT} s")
+            logger.error(
+                f"Failed to receive IP discovery: timeout after {UDP_TIMEOUT} s"
+            )
             self.disconnect()
-
 
     def start_voice_handler(self):
         """Initialize and start voice handler"""
         if not self.voice_handler:
-            self.voice_handler = VoiceHandler(self, self.udp, self.secret_key, self.selected_mode)
+            self.voice_handler = VoiceHandler(
+                self, self.udp, self.secret_key, self.selected_mode
+            )
             self.voice_handler.start()
-
 
     def stop_voice_handler(self):
         """Stoo voice handler without stopping gateway"""
@@ -139,7 +142,6 @@ class Gateway():
             pass
         if self.voice_handler:
             self.voice_handler.stop()
-
 
     def connect(self):
         """Create initial connection to Discord gateway"""
@@ -156,13 +158,16 @@ class Gateway():
         else:
             self.ws.connect(gateway_url + "/?v=8", header=self.header)
         self.state = 1
-        self.heartbeat_interval = int(json.loads(self.ws.recv())["d"]["heartbeat_interval"])
+        self.heartbeat_interval = int(
+            json.loads(self.ws.recv())["d"]["heartbeat_interval"]
+        )
         self.receiver_thread = threading.Thread(target=self.receiver, daemon=True)
         self.receiver_thread.start()
-        self.heartbeat_thread = threading.Thread(target=self.send_heartbeat, daemon=True)
+        self.heartbeat_thread = threading.Thread(
+            target=self.send_heartbeat, daemon=True
+        )
         self.heartbeat_thread.start()
         self.identify()
-
 
     def send(self, request):
         """Send data to gateway"""
@@ -170,7 +175,6 @@ class Gateway():
             self.ws.send(json.dumps(request))
         except websocket._exceptions.WebSocketException:
             self.disconnect()
-
 
     def receiver(self):
         """Receive and handle all traffic from gateway, should be run in a thread"""
@@ -189,7 +193,7 @@ class Gateway():
                     break
                 code = struct.unpack("!H", data[0:2])[0]
                 reason = data[2:].decode("utf-8", "replace")
-                if code in (4022, 4014):   # call terminated, disconnected
+                if code in (4022, 4014):  # call terminated, disconnected
                     break
                 logger.warning(f"Gateway error code: {code}, reason: {reason}")
                 break
@@ -215,16 +219,18 @@ class Gateway():
             elif opcode == 8:
                 self.heartbeat_interval = int(response["d"]["heartbeat_interval"])
 
-            elif opcode == 3:   # requested heartbeat
-                self.send({
-                    "op": 3,
-                    "d": {
-                        "t": int(time.time()) * 1000,
-                        "seq_ack": self.sequence,
-                    },
-                })
+            elif opcode == 3:  # requested heartbeat
+                self.send(
+                    {
+                        "op": 3,
+                        "d": {
+                            "t": int(time.time()) * 1000,
+                            "seq_ack": self.sequence,
+                        },
+                    }
+                )
 
-            elif opcode == 2:   # READY
+            elif opcode == 2:  # READY
                 data = response["d"]
                 self.ssrc = data["ssrc"]
                 self.server_ip = data["ip"]
@@ -237,7 +243,7 @@ class Gateway():
                 self.receive_ip_discovery()
                 self.select_protocol()
 
-            elif opcode == 4:   # SESSION DESCRIPTION
+            elif opcode == 4:  # SESSION DESCRIPTION
                 data = response["d"]
                 self.audio_codec = data["audio_codec"]
                 self.video_codec = data["video_codec"]
@@ -245,11 +251,13 @@ class Gateway():
                 self.selected_mode = data["mode"]
                 self.secret_key = data["secret_key"]
                 self.state = 2
-                logger.debug("Received: SESSION DESCRIPTION event, voice gateway is ready")
-                self.send_speaking(0)
+                logger.debug(
+                    "Received: SESSION DESCRIPTION event, voice gateway is ready"
+                )
+                self.send_speaking(False)
                 self.start_voice_handler()
 
-            elif opcode == 14:   # SESSION UPDATE
+            elif opcode == 14:  # SESSION UPDATE
                 data = response["d"]
                 self.audio_codec = data["audio_codec"]
                 self.video_codec = data["video_codec"]
@@ -257,36 +265,41 @@ class Gateway():
                 self.update = True
                 logger.debug("Received: SESSION UPDATE event")
 
-            elif opcode == 11:   # CLIENT CONNECT
+            elif opcode == 11:  # CLIENT CONNECT
                 data = response["d"]
                 for user_id in data["user_ids"]:
-                    self.call_buffer.append({
-                        "op": "USER_JOIN",
-                        "user_id": user_id,
-                    })
+                    self.call_buffer.append(
+                        {
+                            "op": "USER_JOIN",
+                            "user_id": user_id,
+                        }
+                    )
 
-            elif opcode == 13:   # CLIENT DISCONNECT
+            elif opcode == 13:  # CLIENT DISCONNECT
                 data = response["d"]
-                self.call_buffer.append({
-                    "op": "USER_LEAVE",
-                    "user_id": data["user_id"],
-                })
+                self.call_buffer.append(
+                    {
+                        "op": "USER_LEAVE",
+                        "user_id": data["user_id"],
+                    }
+                )
 
-            elif opcode == 5:   # SPEAKING
+            elif opcode == 5:  # SPEAKING
                 data = response["d"]
-                self.call_buffer.append({
-                    "op": "USER_SPEAKING",
-                    "user_id": data["user_id"],
-                    "speaking": bool(data["user_id"]),
-                })
+                self.call_buffer.append(
+                    {
+                        "op": "USER_SPEAK",
+                        "user_id": data["user_id"],
+                        "speaking": bool(data.get("speaking")),
+                    }
+                )
 
         logger.info("Receiver stopped")
         self.disconnect()
 
-
     def send_heartbeat(self):
         """Send heartbeat to voice gateway, will stop if response is not received, should be run in a thread"""
-        logger.info(f"Heartbeater started, interval={self.heartbeat_interval/1000} s")
+        logger.info(f"Heartbeater started, interval={self.heartbeat_interval / 1000} s")
         self.heartbeat_received = True
         # wait for ready event for some time
         sleep_time = 0
@@ -296,31 +309,36 @@ class Gateway():
                 break
             time.sleep(0.5)
             sleep_time += 5
-        heartbeat_interval_rand = self.heartbeat_interval * (0.8 - 0.6 * random.random()) / 1000
+        heartbeat_interval_rand = (
+            self.heartbeat_interval * (0.8 - 0.6 * random.random()) / 1000
+        )
         heartbeat_sent_time = time.time()
         while self.run:
             if time.time() - heartbeat_sent_time >= heartbeat_interval_rand:
-                self.send({
-                    "op": 3,
-                    "d": {
-                        "t": int(time.time()) * 1000,
-                        "seq_ack": self.sequence,
-                    },
-                })
+                self.send(
+                    {
+                        "op": 3,
+                        "d": {
+                            "t": int(time.time()) * 1000,
+                            "seq_ack": self.sequence,
+                        },
+                    }
+                )
                 heartbeat_sent_time = time.time()
                 logger.debug("Heartbeat sent")
                 if not self.heartbeat_received:
                     logger.warning("Heartbeat reply not received")
                     break
                 self.heartbeat_received = False
-                heartbeat_interval_rand = self.heartbeat_interval * (0.8 - 0.6 * random.random()) / 1000
+                heartbeat_interval_rand = (
+                    self.heartbeat_interval * (0.8 - 0.6 * random.random()) / 1000
+                )
             # sleep(heartbeat_interval * jitter), but jitter is limited to (0.1 - 0.9)
             # in this time heartbeat ack should be received from discord
             time.sleep(0.5)
 
         logger.info("Heartbeater stopped")
         self.disconnect()
-
 
     def identify(self):
         """Identify client with discord voice gateway"""
@@ -333,27 +351,29 @@ class Gateway():
                 "session_id": self.voice_gateway_data["session_id"],
                 "token": self.voice_gateway_data["token"],
                 "video": True,
-                "streams": [{
-                    "type": "video",
-                    "rid": "100",
-                    "quality": 100,
-                },{
-                    "type": "video",
-                    "rid": "50",
-                    "quality":50,
-                }],
+                "streams": [
+                    {
+                        "type": "video",
+                        "rid": "100",
+                        "quality": 100,
+                    },
+                    {
+                        "type": "video",
+                        "rid": "50",
+                        "quality": 50,
+                    },
+                ],
             },
         }
         self.send(payload)
         logger.debug("Identifying with voice gateway")
-
 
     def select_protocol(self):
         """Send SELECT PROTOCOL event with details of the connection"""
         protocol_data = {
             "address": self.client_ip,
             "port": self.client_port,
-            "mode": "aead_xchacha20_poly1305_rtpsize",   # not using AES-GCM because it has different nonce layout
+            "mode": "aead_xchacha20_poly1305_rtpsize",  # not using AES-GCM because it has different nonce layout
         }
         payload = {
             "op": 1,
@@ -366,20 +386,18 @@ class Gateway():
         self.send(payload)
         logger.debug("Sent SELECT PROTOCOL event")
 
-
-    def send_speaking(self, speaking_packet_delay):
+    def send_speaking(self, speaking, delay=0):
         """Send SPEAKING event"""
         payload = {
             "op": 5,
             "d": {
-                "speaking": 1,
-                "delay": speaking_packet_delay,
+                "speaking": int(speaking),
+                "delay": delay,
                 "ssrc": self.ssrc,
             },
         }
         self.send(payload)
         logger.debug("Sent SPEAKING event")
-
 
     def get_state(self):
         """
@@ -389,7 +407,6 @@ class Gateway():
         2 - ready
         """
         return self.state
-
 
     def disconnect(self):
         """Disconnect and stop voice gateway"""
@@ -402,10 +419,9 @@ class Gateway():
                 pass
             if self.voice_handler:
                 self.voice_handler.stop()
-            self.ws.close(timeout=0)   # this will stop receiver
-            time.sleep(0.6)   # time for heartbeater to stop
+            self.ws.close(timeout=0)  # this will stop receiver
+            time.sleep(0.6)  # time for heartbeater to stop
             logger.info("Gateway disconnected")
-
 
     def get_call_events(self):
         """
@@ -416,16 +432,13 @@ class Gateway():
             return None
         return self.call_buffer.pop(0)
 
-
     def get_media_session_id(self):
         """Get media session id"""
         return self.media_session_id
 
-
     def set_mute(self, state):
         """Set muted state, will stop recording and sending sound"""
         self.mute = state
-
 
 
 class VoiceHandler:
@@ -438,11 +451,27 @@ class VoiceHandler:
         self.mode = encryption_mode
         self.audio_queue = queue.Queue(maxsize=10)
         self.opus_decoder = av.codec.CodecContext.create("opus", "r")
+        self.opus_decoder.sample_rate = 48000
+        self.opus_decoder.channels = 2
+        self.opus_decoder.open()
 
+        self.opus_encoder = av.codec.CodecContext.create("opus", "w")
+        self.opus_encoder.sample_rate = 48000
+        self.opus_encoder.channels = 2
+        self.opus_encoder.bit_rate = 64000
+        self.opus_encoder.open()
+
+        self.tx_sequence = random.randint(0, 0xFFFF)
+        self.tx_timestamp = random.randint(0, 0xFFFFFFFF)
+        self.tx_counter = 0
+        self.is_speaking = False
 
     def start(self):
         """Staart receiver and transmitter loops in threads"""
-        if self.mode not in ("aead_aes256_gcm_rtpsize", "aead_xchacha20_poly1305_rtpsize"):
+        if self.mode not in (
+            "aead_aes256_gcm_rtpsize",
+            "aead_xchacha20_poly1305_rtpsize",
+        ):
             logger.error(f"Unsupported encryption mode {self.mode}")
             self.gateway.disconnect()
             return
@@ -450,15 +479,24 @@ class VoiceHandler:
 
         if have_sound:
             # start player
-            self.audio_thread = threading.Thread(target=self.audio_player, args=(48000, 2), daemon=True)
+            self.audio_thread = threading.Thread(
+                target=self.audio_player, args=(48000, 2), daemon=True
+            )
             self.audio_thread.start()
 
             # start receiver
-            self.receiver_thread = threading.Thread(target=self.receiver_loop, daemon=True)
+            self.receiver_thread = threading.Thread(
+                target=self.receiver_loop, daemon=True
+            )
             self.receiver_thread.start()
+
+            # start transmitter
+            self.transmitter_thread = threading.Thread(
+                target=self.transmitter_loop, daemon=True
+            )
+            self.transmitter_thread.start()
         else:
             logger.warning("Could not find any speakers or sound system is not running")
-
 
     def stop(self):
         """Stop voice handler"""
@@ -468,7 +506,6 @@ class VoiceHandler:
             self.udp.close()
         except Exception:
             pass
-
 
     def receiver_loop(self):
         """Receive, unpack, decrypt, decode received data, and put it to queue"""
@@ -498,21 +535,34 @@ class VoiceHandler:
             counter = data[-4:]
             ciphertext = data[cutoff:-4]
 
-
-            if 200 <= data[1] <= 204:   # RTCP
+            if 200 <= data[1] <= 204:  # RTCP
+                # Discord sends RTCP packets for quality monitoring
+                # Type 200 is Sender Report, 201 is Receiver Report
                 pass
 
-            else:   # RTP
+            else:  # RTP
                 # decrypt
                 try:
                     if self.mode == "aead_aes256_gcm_rtpsize":
                         nonce = bytearray(12)
                         nonce[:4] = counter
-                        payload = nacl.bindings.crypto_aead_aes256gcm_decrypt(bytes(ciphertext), bytes(header), bytes(nonce), self.secret_key)[8:]
+                        payload = nacl.bindings.crypto_aead_aes256gcm_decrypt(
+                            bytes(ciphertext),
+                            bytes(header),
+                            bytes(nonce),
+                            self.secret_key,
+                        )[8:]
                     elif self.mode == "aead_xchacha20_poly1305_rtpsize":
                         nonce = bytearray(24)
                         nonce[:4] = counter
-                        payload = nacl.bindings.crypto_aead_xchacha20poly1305_ietf_decrypt(bytes(ciphertext), bytes(header), bytes(nonce), self.secret_key)[8:]
+                        payload = (
+                            nacl.bindings.crypto_aead_xchacha20poly1305_ietf_decrypt(
+                                bytes(ciphertext),
+                                bytes(header),
+                                bytes(nonce),
+                                self.secret_key,
+                            )[8:]
+                        )
                 except Exception as e:
                     logger.error(f"Decryption failed for mode: {self.mode}. Error: {e}")
                     continue
@@ -527,12 +577,97 @@ class VoiceHandler:
                     logger.error(f"PyAV opus decoding failed. Error: {e}")
         self.gateway.disconnect()
 
-
     def audio_player(self, samplerate, channels):
         """Play audio frames from the queue"""
-        with speaker.player(samplerate=samplerate, channels=channels, blocksize=1152) as stream:
+        try:
+            with speaker.player(samplerate=samplerate, channels=channels) as stream:
+                while self.run:
+                    frame = self.audio_queue.get()
+                    if frame is None:
+                        break
+                    stream.play(frame.to_ndarray().astype("float32").T)
+        except Exception as e:
+            logger.error(f"Audio player error: {e}")
+
+    def set_speaking(self, speaking):
+        """Set speaking state and send event to gateway"""
+        if self.is_speaking != speaking:
+            self.is_speaking = speaking
+            self.gateway.send_speaking(speaking)
+
+    def send_packet(self, payload):
+        """Encrypt and send RTP packet"""
+        # RTP header (V=2, PT=120, etc.)
+        header = struct.pack(
+            ">BBHII", 0x80, 0x78, self.tx_sequence, self.tx_timestamp, self.gateway.ssrc
+        )
+
+        # 8-byte prefix for header extension (even if empty)
+        real_payload = b"\xbe\xde\x00\x00\x00\x00\x00\x00" + payload
+
+        nonce = bytearray(24 if self.mode == "aead_xchacha20_poly1305_rtpsize" else 12)
+        struct.pack_into(">I", nonce, 0, self.tx_counter)
+
+        try:
+            if self.mode == "aead_aes256_gcm_rtpsize":
+                encrypted = nacl.bindings.crypto_aead_aes256gcm_encrypt(
+                    real_payload, header, bytes(nonce), self.secret_key
+                )
+            elif self.mode == "aead_xchacha20_poly1305_rtpsize":
+                encrypted = nacl.bindings.crypto_aead_xchacha20poly1305_ietf_encrypt(
+                    real_payload, header, bytes(nonce), self.secret_key
+                )
+            else:
+                return
+
+            # packet = header + ciphertext + tag + counter
+            # nacl returns ciphertext + tag
+            packet = header + encrypted + struct.pack(">I", self.tx_counter)
+            self.udp.send(packet)
+        except Exception as e:
+            logger.error(f"Failed to send audio packet: {e}")
+
+        self.tx_sequence = (self.tx_sequence + 1) & 0xFFFF
+        self.tx_timestamp = (self.tx_timestamp + 960) & 0xFFFFFFFF
+        self.tx_counter = (self.tx_counter + 1) & 0xFFFFFFFF
+
+    def transmitter_loop(self):
+        """Record, encode and send audio data"""
+        logger.debug("Voice transmitter started")
+        try:
+            import soundcard
+
+            mic = soundcard.default_microphone()
+        except Exception as e:
+            logger.warning(f"Could not find microphone: {e}")
+            return
+
+        with mic.recorder(samplerate=48000, channels=2) as rec:
             while self.run:
-                frame = self.audio_queue.get()
-                if frame is None:
+                if self.gateway.mute:
+                    self.set_speaking(False)
+                    time.sleep(0.1)
+                    continue
+
+                try:
+                    # 20ms of audio
+                    data = rec.record(numframes=960)
+                except Exception as e:
+                    logger.error(f"Mic record error: {e}")
                     break
-                stream.play(frame.to_ndarray().astype("float32").T)
+
+                # Create PyAV frame from (960, 2) float32 array
+                # PyAV expects (channels, samples) for fltp
+                frame = av.AudioFrame.from_ndarray(
+                    data.T, format="fltp", layout="stereo"
+                )
+                frame.sample_rate = 48000
+
+                packets = self.opus_encoder.encode(frame)
+                if packets:
+                    self.set_speaking(True)
+                    for packet in packets:
+                        self.send_packet(packet.to_bytes())
+
+        self.set_speaking(False)
+        logger.debug("Voice transmitter stopped")

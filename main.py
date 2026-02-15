@@ -7,7 +7,9 @@ import sys
 import time
 import traceback
 
-os.environ["PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION"] = "python"   # fix for https://github.com/Nuitka/Nuitka/issues/3442
+os.environ["PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION"] = (
+    "python"  # fix for https://github.com/Nuitka/Nuitka/issues/3442
+)
 
 from endcord import arg, defaults, peripherals
 
@@ -67,7 +69,7 @@ def main(args):
         defaults.command_bindings,
         section="command_bindings",
         gen_config=gen_config,
-        merge = True,
+        merge=True,
     )
     if not uses_pgcurses:
         keybindings = peripherals.convert_keybindings(keybindings)
@@ -75,34 +77,39 @@ def main(args):
 
     keybindings = peripherals.normalize_keybindings(keybindings)
 
-    os.environ["ESCDELAY"] = "25"   # 25ms
-    if os.environ.get("TERM", "") == "linux" or os.environ.get("TERM", "").startswith("xterm"):   # for xterm-ghostty
+    os.environ["ESCDELAY"] = "25"  # 25ms
+    if os.environ.get("TERM", "") == "linux" or os.environ.get("TERM", "").startswith(
+        "xterm"
+    ):  # for xterm-ghostty
         os.environ["REALTERM"] = os.environ["TERM"]
-        os.environ["TERM"] = "xterm-256color"   # try to force 256-color mode
+        os.environ["TERM"] = "xterm-256color"  # try to force 256-color mode
     peripherals.ensure_ssl_certificates()
 
     if args.colors:
         # import here for faster startup
         from endcord import color
+
         if uses_pgcurses:
             curses.enable_tray = False
         color.color_palette()
         sys.exit(0)
     elif args.keybinding:
         from endcord import keybinding
+
         if uses_pgcurses:
             curses.enable_tray = False
         keybinding.picker(keybindings, command_bindings)
         sys.exit(0)
     elif args.media:
         if not (
-            importlib.util.find_spec("PIL") is not None and
-            importlib.util.find_spec("av") is not None and
-            importlib.util.find_spec("nacl") is not None
+            importlib.util.find_spec("PIL") is not None
+            and importlib.util.find_spec("av") is not None
+            and importlib.util.find_spec("nacl") is not None
         ):
             print("Terminal media player is not supported", file=sys.stderr)
             sys.exit(1)
         from endcord import media
+
         if uses_pgcurses:
             curses.enable_tray = False
         try:
@@ -123,10 +130,21 @@ def main(args):
     if args.debug or config["debug"]:
         logging.getLogger().setLevel(logging.DEBUG)
 
+    from endcord import l10n
+
+    l10n.set_locale(config.get("locale", "en"))
+
     from endcord import profile_manager
+
     logger.info(f"Started endcord {VERSION}")
     if args.token:
-        profiles = {"selected": "default", "plaintext": [{"name": "default", "token": args.token, "time": int(time.time())}], "keyring": []}
+        profiles = {
+            "selected": "default",
+            "plaintext": [
+                {"name": "default", "token": args.token, "time": int(time.time())}
+            ],
+            "keyring": [],
+        }
         proceed = True
     else:
         profiles_path = os.path.join(peripherals.config_path, "profiles.json")
@@ -134,7 +152,9 @@ def main(args):
             selected = args.profile
         else:
             selected = None
-        profiles, selected, proceed = profile_manager.manage(profiles_path, selected, config, force_open=args.manager)
+        profiles, selected, proceed = profile_manager.manage(
+            profiles_path, selected, config, force_open=args.manager
+        )
         if not profiles:
             print("Token not provided in profile manager nor as argument")
             sys.exit(0)
@@ -143,7 +163,10 @@ def main(args):
 
     try:
         from endcord import app
-        curses.wrapper(app.Endcord, config, keybindings, command_bindings, profiles, VERSION)
+
+        curses.wrapper(
+            app.Endcord, config, keybindings, command_bindings, profiles, VERSION
+        )
     except curses.error as e:
         if str(e) != "endwin() returned ERR":
             logger.error(traceback.format_exc())
