@@ -41,7 +41,9 @@ def get_version_number():
 
 def get_python_version():
     """Get python major and minor versions"""
-    version_result = subprocess.run(["uv", "run", "python", "--version"], capture_output=True, text=True, check=True)
+    version_result = subprocess.run(
+        ["uv", "run", "python", "--version"], capture_output=True, text=True, check=True
+    )
     parts = version_result.stdout.strip().replace("Python ", "").split(".")
     if len(parts) < 2:
         return None
@@ -51,10 +53,11 @@ def get_python_version():
 def supports_color():
     """Return True if the running terminal supports ANSI colors."""
     if sys.platform == "win32":
-        return (os.getenv("ANSICON") is not None or
-            os.getenv("WT_SESSION") is not None or
-            os.getenv("TERM_PROGRAM") == "vscode" or
-            os.getenv("TERM") in ("xterm", "xterm-color", "xterm-256color")
+        return (
+            os.getenv("ANSICON") is not None
+            or os.getenv("WT_SESSION") is not None
+            or os.getenv("TERM_PROGRAM") == "vscode"
+            or os.getenv("TERM") in ("xterm", "xterm-color", "xterm-256color")
         )
     if not sys.stdout.isatty():
         return False
@@ -66,7 +69,9 @@ PKGVER = get_version_number()
 USE_COLOR = supports_color()
 
 
-def fprint(text, color_code="\033[1;35m", prepend=f"[{PKGNAME.capitalize()} Build Script]: "):
+def fprint(
+    text, color_code="\033[1;35m", prepend=f"[{PKGNAME.capitalize()} Build Script]: "
+):
     """Print colored text prepended with text, default is light purple"""
     if USE_COLOR:
         print(f"{color_code}{prepend}{text}\033[0m")
@@ -77,15 +82,23 @@ def fprint(text, color_code="\033[1;35m", prepend=f"[{PKGNAME.capitalize()} Buil
 def check_python():
     """Check python version and print warning, and return True if runing inside pure python (no uv)"""
     if sys.version_info.major != 3:
-        print(f"Python {sys.version_info.major} is not supported. Only Python 3 is supported.", file=sys.stderr)
+        print(
+            f"Python {sys.version_info.major} is not supported. Only Python 3 is supported.",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
     if os.environ.get("UV", ""):
         if sys.version_info.minor < 12 or sys.version_info.minor > PYTHON_MAX_MINOR:
-            fprint(f'WARNING: Python {sys.version_info.major}.{sys.version_info.minor} is not supported but build may succeed. Run "python build.py" to let uv download and setup recommended temporary python interpreter.', color_code="\033[1;31m")
+            fprint(
+                f'WARNING: Python {sys.version_info.major}.{sys.version_info.minor} is not supported but build may succeed. Run "python build.py" to let uv download and setup recommended temporary python interpreter.',
+                color_code="\033[1;31m",
+            )
         else:
             try:
-                version = subprocess.run(["uv", "--version"], capture_output=True, text=True, check=True)
+                version = subprocess.run(
+                    ["uv", "--version"], capture_output=True, text=True, check=True
+                )
                 fprint(f"Using {version.stdout.strip()}")
             except Exception:
                 pass
@@ -93,12 +106,17 @@ def check_python():
         return False
 
     try:
-        version = subprocess.run(["uv", "--version"], capture_output=True, text=True, check=True)
+        version = subprocess.run(
+            ["uv", "--version"], capture_output=True, text=True, check=True
+        )
     except subprocess.CalledProcessError as e:
         print(f"uv error: {e}", file=sys.stderr)
         sys.exit(1)
     except FileNotFoundError:
-        print("uv command not found, please ensure uv is installed and in PATH", file=sys.stderr)
+        print(
+            "uv command not found, please ensure uv is installed and in PATH",
+            file=sys.stderr,
+        )
         sys.exit(1)
     return True
 
@@ -119,9 +137,9 @@ def ensure_python():
 def check_media_support():
     """Check if media is supported"""
     return (
-        importlib.util.find_spec("PIL") is not None and
-        importlib.util.find_spec("av") is not None and
-        importlib.util.find_spec("nacl") is not None
+        importlib.util.find_spec("PIL") is not None
+        and importlib.util.find_spec("av") is not None
+        and importlib.util.find_spec("nacl") is not None
     )
 
 
@@ -136,12 +154,15 @@ def remove_media():
     """Remove media support"""
     if check_media_support():
         fprint("Removing media support dependencies")
-        subprocess.run(["uv", "pip", "uninstall", "pillow" , "av", "pynacl"], check=True)
+        subprocess.run(["uv", "pip", "uninstall", "pillow", "av", "pynacl"], check=True)
 
 
 def check_dev():
     """Check if its dev environment and set it up"""
-    if importlib.util.find_spec("PyInstaller") is None or importlib.util.find_spec("nuitka") is None:
+    if (
+        importlib.util.find_spec("PyInstaller") is None
+        or importlib.util.find_spec("nuitka") is None
+    ):
         subprocess.run(["uv", "sync", "--group", "build"], check=True)
 
 
@@ -150,14 +171,18 @@ def build_third_party_licenses(exclude=[]):
     fprint("Building list of third party licenses")
     subprocess.run(["uv", "pip", "install", "pip-licenses"], check=True)
     command = [
-        "uv", "run", "pip-licenses",
+        "uv",
+        "run",
+        "pip-licenses",
         "--ignore-packages " + " ".joind(exclude),
         "--format=plain-vertical",
         "--no-license-path",
         "--output-file=THIRD_PARTY_LICENSES.txt",
     ]
     subprocess.run(command, check=True)
-    subprocess.run(["uv", "pip", "uninstall", "pip-licenses", "prettytable", "wcwidth"], check=True)
+    subprocess.run(
+        ["uv", "pip", "uninstall", "pip-licenses", "prettytable", "wcwidth"], check=True
+    )
 
 
 def get_cython_bins(directory="endcord_cython", startswith=None):
@@ -165,7 +190,9 @@ def get_cython_bins(directory="endcord_cython", startswith=None):
     files = os.listdir(directory)
     bins = []
     for file in files:
-        if (not startswith or file.startswith(startswith)) and (file.endswith(".pyd") or file.endswith(".so")):
+        if (not startswith or file.startswith(startswith)) and (
+            file.endswith(".pyd") or file.endswith(".so")
+        ):
             bins.append(file)
     return bins
 
@@ -241,8 +268,13 @@ def patch_soundcard():
         match = re.match(pattern, line)
         if match:
             indent = match.group(1)
-            lines[num] = f"{indent}if self._pa_context_get_state(self.context) != _pa.PA_CONTEXT_READY:\n"
-            lines.insert(num+1, f'{indent+"    "}raise RuntimeError("PulseAudio context not ready (no sound system?)")\n')
+            lines[num] = (
+                f"{indent}if self._pa_context_get_state(self.context) != _pa.PA_CONTEXT_READY:\n"
+            )
+            lines.insert(
+                num + 1,
+                f'{indent + "    "}raise RuntimeError("PulseAudio context not ready (no sound system?)")\n',
+            )
             changed = True
             break
 
@@ -302,7 +334,14 @@ def clean_emoji():
 
 def clean_qrcode():
     """Clean qrcode library from unused code to reduce binary size"""
-    blacklist = ["console_scripts.py", "release.py", "styledpil.py", "svg.py", "pil.py", "tests"]
+    blacklist = [
+        "console_scripts.py",
+        "release.py",
+        "styledpil.py",
+        "svg.py",
+        "pil.py",
+        "tests",
+    ]
     for file in blacklist:
         path = True
         path = find_file_in_venv("qrcode", file, silent=True, recurse=True)
@@ -321,7 +360,9 @@ def toggle_experimental(check_only=False):
         subdirs[:] = [d for d in subdirs if not d.startswith(".")]
         for name in files:
             file_path = os.path.join(path, name)
-            if not name.startswith(".") and (file_path.endswith(".py") or file_path.endswith(".pyx")):
+            if not name.startswith(".") and (
+                file_path.endswith(".py") or file_path.endswith(".pyx")
+            ):
                 file_list.append(file_path)
     enable = False
     for path in file_list:
@@ -388,13 +429,15 @@ def toggle_experimental(check_only=False):
         subprocess.run(["uv", "pip", "install"] + experimental_dependencies, check=True)
         fprint("Experimental windowed mode enabled!")
     else:
-        subprocess.run(["uv", "pip", "uninstall"] + experimental_dependencies, check=True)
+        subprocess.run(
+            ["uv", "pip", "uninstall"] + experimental_dependencies, check=True
+        )
         fprint("Experimental windowed mode disabled!")
     return not enable
 
 
 def enable_extensions(enable=True, check_only=False, silent=False):
-    """"Enable/disable extensions support in the code"""
+    """ "Enable/disable extensions support in the code"""
     path = "./endcord/app.py"
     with open(path, "r", encoding="utf-8") as f:
         lines = f.readlines()
@@ -412,7 +455,7 @@ def enable_extensions(enable=True, check_only=False, silent=False):
         with open(path, "w", encoding="utf-8") as f:
             f.writelines(lines)
     if not check_only and not silent:
-        fprint(f"Extensions {"enabled" if enable else "disabled"}!")
+        fprint(f"Extensions {'enabled' if enable else 'disabled'}!")
 
 
 def build_numpy_lite(clang):
@@ -423,28 +466,49 @@ def build_numpy_lite(clang):
 
     # check if numpy without blas is not already installed
     cmd = [
-        "uv", "run", "python", "-c",
+        "uv",
+        "run",
+        "python",
+        "-c",
         "import numpy; print(int(numpy.__config__.show_config('dicts')['Build Dependencies']['blas'].get('found', False)))",
     ]
     fprint("Building numpy lite (no openblas)")
-    if int(subprocess.run(cmd, capture_output=True, text=True, check=True).stdout.strip()):
+    if int(
+        subprocess.run(cmd, capture_output=True, text=True, check=True).stdout.strip()
+    ):
         if clang:
             os.environ["CC"] = "clang"
             os.environ["CXX"] = "clang++"
-        subprocess.run(["uv", "pip", "install", "pip"], check=True)   # because uv wont work with --config-settings as intended
+        subprocess.run(
+            ["uv", "pip", "install", "pip"], check=True
+        )  # because uv wont work with --config-settings as intended
         try:
             if sys.platform == "win32":
                 python_interpreter = r".venv\Scripts\python.exe"
             else:
                 python_interpreter = ".venv/bin/python"
-            subprocess.run([python_interpreter, "-m", "pip", "uninstall", "--yes", "numpy"], check=True)
-            subprocess.run([
-                python_interpreter, "-m", "pip", "install", "--no-cache-dir", "--no-binary=:all:", "numpy",
-                "--config-settings=setup-args=-Dblas=None",
-                "--config-settings=setup-args=-Dlapack=None",
-            ], check=True)
-        except subprocess.CalledProcessError:   # fallback
-            print("Failed building numpy lite (no openblas), faling back to default numpy")
+            subprocess.run(
+                [python_interpreter, "-m", "pip", "uninstall", "--yes", "numpy"],
+                check=True,
+            )
+            subprocess.run(
+                [
+                    python_interpreter,
+                    "-m",
+                    "pip",
+                    "install",
+                    "--no-cache-dir",
+                    "--no-binary=:all:",
+                    "numpy",
+                    "--config-settings=setup-args=-Dblas=None",
+                    "--config-settings=setup-args=-Dlapack=None",
+                ],
+                check=True,
+            )
+        except subprocess.CalledProcessError:  # fallback
+            print(
+                "Failed building numpy lite (no openblas), faling back to default numpy"
+            )
             subprocess.run(["uv", "pip", "install", "numpy"], check=True)
         subprocess.run(["uv", "pip", "uninstall", "pip"], check=True)
     else:
@@ -453,13 +517,15 @@ def build_numpy_lite(clang):
 
 def build_cython(clang, mingw):
     """Build cython extensions"""
-    fprint(f"Compiling cython code with {"clang" if clang else "gcc"}{("mingw") if mingw else ""}")
+    fprint(
+        f"Compiling cython code with {'clang' if clang else 'gcc'}{('mingw') if mingw else ''}"
+    )
     cmd = ["uv", "run", "python", "setup.py", "build_ext", "--inplace"]
     if clang:
         os.environ["CC"] = "clang"
         os.environ["CXX"] = "clang++"
     elif mingw and sys.platform == "win32":
-        cmd.append("--compiler=mingw32")   # covers mingw 32 and 64
+        cmd.append("--compiler=mingw32")  # covers mingw 32 and 64
 
     # run process with control of stdout
     process = subprocess.Popen(
@@ -471,7 +537,12 @@ def build_cython(clang, mingw):
     )
     for line in process.stdout:
         line_clean = line.rstrip("\n")
-        if len(line_clean) < 100 and "Cythonizing" not in line_clean and "Compiling" not in line_clean and "creating" not in line_clean:
+        if (
+            len(line_clean) < 100
+            and "Cythonizing" not in line_clean
+            and "Compiling" not in line_clean
+            and "creating" not in line_clean
+        ):
             print(line_clean)
     process.wait()
     if process.returncode != 0:
@@ -485,8 +556,9 @@ def build_cython(clang, mingw):
 
 def build_with_pyinstaller(onedir, nosoundcard, print_cmd=False):
     """Build with pyinstaller"""
+    media_support = check_media_support()
     if not print_cmd:
-        if check_media_support():
+        if media_support:
             pkgname = PKGNAME
             fprint("ASCII media support is enabled")
         else:
@@ -501,6 +573,13 @@ def build_with_pyinstaller(onedir, nosoundcard, print_cmd=False):
         "--exclude-module=cython",
         "--exclude-module=zstandard",
     ]
+    if not media_support:
+        exclude_imports += [
+            "--exclude-module=av",
+            "--exclude-module=PIL",
+            "--exclude-module=nacl",
+        ]
+
     package_data = [
         "--collect-data=emoji",
         "--collect-data=soundcard",
@@ -524,7 +603,11 @@ def build_with_pyinstaller(onedir, nosoundcard, print_cmd=False):
 
     # prepare command and run it
     cmd = [
-        "uv", "run", "python", "-m", "PyInstaller",
+        "uv",
+        "run",
+        "python",
+        "-m",
+        "PyInstaller",
         mode,
         *hidden_imports,
         *exclude_imports,
@@ -556,10 +639,13 @@ def build_with_pyinstaller(onedir, nosoundcard, print_cmd=False):
     fprint(f"Finished building {pkgname}")
 
 
-def build_with_nuitka(onedir, clang, mingw, nosoundcard, print_cmd=False, experimental=False):
+def build_with_nuitka(
+    onedir, clang, mingw, nosoundcard, print_cmd=False, experimental=False
+):
     """Build with nuitka"""
+    media_support = check_media_support()
     if not print_cmd:
-        if check_media_support():
+        if media_support:
             pkgname = PKGNAME
             fprint("ASCII media support is enabled")
         else:
@@ -580,16 +666,22 @@ def build_with_nuitka(onedir, clang, mingw, nosoundcard, print_cmd=False, experi
     elif mingw:
         compiler = "--mingw64"
     python_flags = ["--python-flag=-OO"]
-    hidden_imports = [
-        "--include-module=uuid",
-        "--include-module=av.sidedata.encparams",
-    ]
+    hidden_imports = ["--include-module=uuid"]
+    if media_support:
+        hidden_imports.append("--include-module=av.sidedata.encparams")
+
     # excluding zstandard because its nuitka dependency bu also urllib3 optional dependency, and uses lots of space
     exclude_imports = [
         "--nofollow-import-to=cython",
         "--nofollow-import-to=zstandard",
         "--nofollow-import-to=google._upb",
     ]
+    if not media_support:
+        exclude_imports += [
+            "--nofollow-import-to=av",
+            "--nofollow-import-to=PIL",
+            "--nofollow-import-to=nacl",
+        ]
     package_data = [
         "--include-package-data=emoji:unicode_codes/emoji.json",
         "--include-package-data=soundcard",
@@ -626,7 +718,11 @@ def build_with_nuitka(onedir, clang, mingw, nosoundcard, print_cmd=False, experi
 
     # prepare command and run it
     cmd = [
-        "uv", "run", "python", "-m", "nuitka",
+        "uv",
+        "run",
+        "python",
+        "-m",
+        "nuitka",
         mode,
         compiler,
         *python_flags,
@@ -730,7 +826,9 @@ if __name__ == "__main__":
 
     if args.print_cmd:
         if args.nuitka:
-            build_with_nuitka(args.onedir, args.clang, args.mingw, args.nosoundcard, print_cmd=True)
+            build_with_nuitka(
+                args.onedir, args.clang, args.mingw, args.nosoundcard, print_cmd=True
+            )
         else:
             build_with_pyinstaller(args.onedir, args.nosoundcard, print_cmd=True)
         sys.exit(0)
@@ -778,11 +876,25 @@ if __name__ == "__main__":
             fprint(f"Failed building cython extensions, error: {e}")
 
     if args.build_licenses:
-        exclude = ["ordered-set", "zstandard", "altgraph", "packaging", "pyinstaller-hooks-contrib", "packaging", "setuptools"]
+        exclude = [
+            "ordered-set",
+            "zstandard",
+            "altgraph",
+            "packaging",
+            "pyinstaller-hooks-contrib",
+            "packaging",
+            "setuptools",
+        ]
         build_third_party_licenses(exclude)
 
     if args.nuitka:
-        build_with_nuitka(args.onedir, args.clang, args.mingw, args.nosoundcard, experimental=experimental)
+        build_with_nuitka(
+            args.onedir,
+            args.clang,
+            args.mingw,
+            args.nosoundcard,
+            experimental=experimental,
+        )
     else:
         build_with_pyinstaller(args.onedir, args.nosoundcard)
 
